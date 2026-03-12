@@ -7,7 +7,9 @@
 
 Catch data exfiltration, backdoors, privilege escalation, credential leaks, and supply chain vulnerabilities **before** they reach your AI agents.
 
-> **We scanned the top ClawHub skill repos to understand the security surface area.** Many findings are false positives from legitimate code (API integrations, deploy scripts), but they highlight patterns that malicious skills could exploit. [Read the full report →](docs/clawhub-security-report.md)
+**Offline-first. Open source. Your data never leaves your machine.**
+
+> 💡 **vs Snyk Agent Scan:** AgentShield runs 100% locally with no API keys required. Add `--ai` for LLM-powered deep analysis using your own API key — no vendor lock-in, no rate limits.
 
 ## Why AgentShield?
 
@@ -19,17 +21,23 @@ AI agents install and execute third-party skills, MCP servers, and plugins with 
 - ⛏️ **Mine crypto** — hijack compute for cryptocurrency mining
 - 🕵️ **Bypass permissions** — claim "read-only" but execute shell commands
 
-AgentShield catches these patterns with **16 security rules** in under 50ms.
+AgentShield catches these patterns with **18 security rules** in under 50ms. Add `--ai` for LLM-powered deep analysis.
 
 ## Quick Start
 
 ```bash
+# Static analysis (18 rules, offline, ~50ms)
 npx @elliotllliu/agentshield scan ./my-skill/
+
+# AI-powered deep analysis
+npx @elliotllliu/agentshield scan ./skill/ --ai --provider openai --model gpt-4o
+npx @elliotllliu/agentshield scan ./skill/ --ai --provider ollama --model llama3
+
+# Discover installed agents on your machine
+npx @elliotllliu/agentshield discover
 ```
 
-No installation required. Works with Node.js 18+.
-
-## What It Detects — 16 Security Rules
+## What It Detects — 18 Security Rules
 
 ### 🔴 Critical (auto-fail)
 
@@ -44,6 +52,8 @@ No installation required. Works with Node.js 18+.
 | `obfuscation` | `eval(atob(...))`, hex strings, `String.fromCharCode` obfuscation |
 | `typosquatting` | Suspicious npm names: `1odash` → `lodash`, `axois` → `axios` |
 | `hidden-files` | `.env` files with `PASSWORD`, `SECRET`, `API_KEY` committed to repo |
+| `prompt-injection` | Hidden instructions, identity manipulation, behavioral hijacking |
+| `tool-shadowing` | Cross-server tool name conflicts, tool override attacks |
 
 ### 🟡 Warning (review recommended)
 
@@ -99,6 +109,14 @@ We scanned the **top 9 ClawHub skill repositories** (700K+ combined installs). M
 ```bash
 # Scan a directory
 npx @elliotllliu/agentshield scan ./path/to/skill/
+
+# AI-powered deep analysis (uses your own API key)
+npx @elliotllliu/agentshield scan ./skill/ --ai --provider openai --model gpt-4o
+npx @elliotllliu/agentshield scan ./skill/ --ai --provider anthropic
+npx @elliotllliu/agentshield scan ./skill/ --ai --provider ollama --model llama3
+
+# Discover installed agents on your machine
+npx @elliotllliu/agentshield discover
 
 # JSON output (for CI/CD pipelines)
 npx @elliotllliu/agentshield scan ./skill/ --json
@@ -227,16 +245,24 @@ __tests__/
 
 ## Comparison with Other Tools
 
-| Feature | AgentShield | npm audit | Snyk | ESLint Security |
-|---------|------------|-----------|------|-----------------|
-| AI skill/MCP specific rules | ✅ | ❌ | ❌ | ❌ |
-| Data exfiltration detection | ✅ | ❌ | ❌ | ❌ |
+| Feature | AgentShield | Snyk Agent Scan | npm audit | ESLint Security |
+|---------|------------|-----------------|-----------|-----------------|
+| AI skill/MCP specific rules | ✅ 18 rules | ✅ 15+ rules | ❌ | ❌ |
+| Prompt injection detection | ✅ regex + AI | ✅ LLM (cloud) | ❌ | ❌ |
+| Tool poisoning/shadowing | ✅ | ✅ | ❌ | ❌ |
+| Agent auto-discovery | ✅ 10 agents | ✅ | ❌ | ❌ |
+| AI-powered analysis | ✅ `--ai` (your key) | ✅ (Snyk cloud) | ❌ | ❌ |
+| Data exfiltration detection | ✅ | ✅ | ❌ | ❌ |
 | Permission mismatch (SKILL.md) | ✅ | ❌ | ❌ | ❌ |
-| Credential hardcode detection | ✅ | ❌ | ✅ | ✅ |
-| Supply chain CVEs | ✅ | ✅ | ✅ | ❌ |
-| Zero config | ✅ | ✅ | ❌ | ❌ |
-| No API key required | ✅ | ✅ | ❌ | ✅ |
-| < 50ms scan time | ✅ | ❌ | ❌ | ❌ |
+| Zero config / no account | ✅ | ❌ needs Snyk token | ✅ | ❌ |
+| 100% offline capable | ✅ | ❌ cloud required | ✅ | ✅ |
+| `npx` zero-install | ✅ | ❌ needs Python+uv | ✅ | ❌ |
+| GitHub Action | ✅ | ❌ | ❌ | ❌ |
+| Web UI | ✅ | ❌ | ❌ | ❌ |
+| Choose your own LLM | ✅ OpenAI/Anthropic/Ollama | ❌ Snyk backend | ❌ | ❌ |
+| False positive detection | ✅ context-aware | ❌ | ❌ | ❌ |
+| No rate limits | ✅ | ❌ daily quota | ✅ | ✅ |
+| Open source analysis | ✅ fully open | ❌ black box | ✅ | ✅ |
 
 ## Contributing
 
