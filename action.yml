@@ -1,0 +1,70 @@
+name: 'AgentShield Security Scan'
+description: 'Scan AI agent skills, MCP servers, and plugins for security vulnerabilities'
+author: 'Elliot Liu'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Directory to scan'
+    required: false
+    default: '.'
+  fail-under:
+    description: 'Fail if security score is below this threshold (0-100)'
+    required: false
+    default: ''
+  format:
+    description: 'Output format: terminal or json'
+    required: false
+    default: 'terminal'
+
+outputs:
+  score:
+    description: 'Security score (0-100)'
+    value: ${{ steps.scan.outputs.score }}
+  findings:
+    description: 'Number of findings'
+    value: ${{ steps.scan.outputs.findings }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run AgentShield scan
+      id: scan
+      shell: bash
+      run: |
+        # Build args
+        ARGS="${{ inputs.path }}"
+
+        if [ "${{ inputs.format }}" = "json" ]; then
+          ARGS="$ARGS --json"
+        fi
+
+        FAIL_UNDER="${{ inputs.fail-under }}"
+        if [ -n "$FAIL_UNDER" ]; then
+          ARGS="$ARGS --fail-under $FAIL_UNDER"
+        fi
+
+        # Run scan and capture output
+        set +e
+        OUTPUT=$(npx -y @elliotllliu/agentshield scan $ARGS 2>&1)
+        EXIT_CODE=$?
+        set -e
+
+        echo "$OUTPUT"
+
+        # Extract score from JSON output or terminal output
+        SCORE=$(echo "$OUTPUT" | grep -oP 'Score: \K[0-9]+' || echo "$OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['score'])" 2>/dev/null || echo "unknown")
+        FINDINGS=$(echo "$OUTPUT" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['findings']))" 2>/dev/null || echo "unknown")
+
+        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+        echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
+
+        exit $EXIT_CODE

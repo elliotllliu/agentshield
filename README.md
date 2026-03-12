@@ -7,7 +7,7 @@ Catch data exfiltration, backdoors, privilege escalation, and supply chain vulne
 ## Quick Start
 
 ```bash
-npx agentshield scan ./my-skill/
+npx @elliotllliu/agentshield scan ./my-skill/
 ```
 
 ## What It Detects
@@ -69,11 +69,44 @@ agentshield ./skill/
 
 ## CI Integration
 
+### GitHub Action (recommended)
+
 ```yaml
-# GitHub Actions
-- name: Security scan
-  run: npx agentshield scan ./skills/ --fail-under 70
+# .github/workflows/security.yml
+name: Security Scan
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: elliotllliu/agentshield@main
+        with:
+          path: './skills/'
+          fail-under: '70'
 ```
+
+### npx one-liner
+
+```yaml
+- name: Security scan
+  run: npx -y @elliotllliu/agentshield scan ./skills/ --fail-under 70
+```
+
+### Action Inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `path` | `.` | Directory to scan |
+| `fail-under` | *(none)* | Fail if score is below threshold (0-100) |
+| `format` | `terminal` | Output format: `terminal` or `json` |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `score` | Security score (0-100) |
+| `findings` | Number of findings |
 
 ## Scoring
 
