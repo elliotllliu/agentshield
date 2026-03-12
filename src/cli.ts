@@ -8,6 +8,7 @@ import { printReport } from "./reporter/terminal.js";
 import { printJsonReport } from "./reporter/json.js";
 import { generateBadgeSvg, generateBadgeMarkdown } from "./reporter/badge.js";
 import { discoverAgents, printDiscovery } from "./discover.js";
+import { getLlmConfigFromEnv, runLlmAnalysis } from "./llm-analyzer.js";
 import { DEFAULT_CONFIG, DEFAULT_IGNORE } from "./config.js";
 
 const program = new Command();
@@ -25,7 +26,8 @@ program
   .option("--fail-under <score>", "Exit with code 1 if score is below threshold", parseInt)
   .option("--disable <rules>", "Comma-separated rules to disable")
   .option("--enable <rules>", "Comma-separated rules to enable (only these)")
-  .action((directory: string, options: { json?: boolean; failUnder?: number; disable?: string; enable?: string }) => {
+  .option("--llm", "Enable LLM-based deep prompt injection analysis (requires API key in env)")
+  .action(async (directory: string, options: { json?: boolean; failUnder?: number; disable?: string; enable?: string; llm?: boolean }) => {
     const target = resolve(directory);
 
     if (!existsSync(target) || !statSync(target).isDirectory()) {
@@ -45,6 +47,23 @@ program
     }
 
     const result = scan(target, configOverride);
+
+    // LLM-based deep analysis (optional)
+    if (options.llm) {
+      const llmConfig = getLlmConfigFromEnv();
+      if (!llmConfig) {
+        console.error("Error: --llm requires an API key. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or AGENTSHIELD_API_KEY.");
+        process.exit(1);
+      }
+      console.error(`🤖 Running LLM analysis with ${llmConfig.model}...`);
+      const { collectFiles } = await import("./scanner/files.js");
+      const files = collectFiles(target);
+      const llmFindings = await runLlmAnalysis(files, llmConfig);
+      result.findings.push(...llmFindings);
+      // Recalculate score
+      const { computeScore } = await import("./score.js");
+      result.score = computeScore(result.findings);
+    }
 
     if (options.json) {
       printJsonReport(result);
