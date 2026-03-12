@@ -61,14 +61,15 @@ npx @elliotllliu/agentshield scan ./my-skill/
 
 | 仓库 | 安装量 | 分数 | 风险 |
 |------|--------|------|------|
-| vercel-labs/agent-skills | 157K | 🔴 0/100 | deploy 脚本有 `$(curl)` 命令替换 |
-| obra/superpowers | 94K | 🔴 0/100 | 渲染脚本有动态代码执行 |
-| coreyhaines31/marketingskills | 42K | 🔴 0/100 | 122 个 critical（CRM 凭证模式） |
-| anthropics/skills | 36K | 🔴 35/100 | 模板有 exec() |
-| google-labs-code/stitch-skills | 63K | ✅ 100/100 | 干净 |
-| supercent-io/skills-template | 106K | ✅ 100/100 | 干净 |
+| vercel-labs/agent-skills | 157K | 40 | ✅ deploy 脚本误报已自动标注 |
+| obra/superpowers | 94K | 45 | ⚠️ 测试代码 + 渲染脚本 exec() |
+| coreyhaines31/marketingskills | 42K | 0 | ⚠️ 122 个 critical（CRM 凭证模式） |
+| anthropics/skills | 36K | 35 | ⚠️ 模板有 exec() |
+| expo/skills | 11K | 30 | ⚠️ CI 脚本读 env（FP 已标注） |
+| google-labs-code/stitch-skills | 63K | 100 | ✅ 干净 |
+| supercent-io/skills-template | 106K | 100 | ✅ 干净 |
 
-**平均分：47/100** — 超半数热门 skill 有严重安全隐患。
+**平均分：59/100** — AgentShield v0.2.1 智能识别 test/deploy 文件，减少误报。
 
 ## 使用方法
 

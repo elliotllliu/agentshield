@@ -61,11 +61,12 @@ No installation required. Works with Node.js 18+.
 
 We scanned the **top 9 ClawHub skill repositories** (700K+ combined installs). Most findings are **false positives from legitimate code** (deploy scripts, API integrations), but they demonstrate patterns that malicious skills could replicate:
 
-| Repository | Installs | Raw Score | Assessment |
-|------------|----------|-----------|------------|
-| vercel-labs/agent-skills | 157K | 0 | ✅ False positives — deploy scripts use `curl` legitimately |
-| obra/superpowers | 94K | 0 | ⚠️ Test code + render exec() |
+| Repository | Installs | Score | Assessment |
+|------------|----------|-------|------------|
+| vercel-labs/agent-skills | 157K | 40 | ✅ False positives — deploy scripts use `curl` legitimately |
+| obra/superpowers | 94K | 45 | ⚠️ Test code + render exec() |
 | coreyhaines31/marketingskills | 42K | 0 | ⚠️ 100+ API wrapper tools (legitimate credential access) |
+| expo/skills | 11K | 30 | ⚠️ CI script reads env (FP detected) |
 | anthropics/skills | 36K | 35 | ⚠️ Template contains exec() |
 | google-labs-code/stitch-skills | 63K | 100 | ✅ Clean |
 | supercent-io/skills-template | 106K | 100 | ✅ Clean |

@@ -1,6 +1,6 @@
 # 🛡️ ClawHub Security Report — Top Skills Audit
 
-> Scanned by [AgentShield](https://github.com/elliotllliu/agentshield) v0.2.1
+> Scanned by [AgentShield](https://github.com/elliotllliu/agentshield) v0.2.1 (with false-positive detection)
 > Date: 2026-03-12
 
 ## Summary
@@ -12,18 +12,20 @@ We scanned **9 of the most popular skill repositories** on ClawHub, covering ski
 | Metric | Value |
 |--------|-------|
 | Repos scanned | 9 |
-| Average raw score | **47/100** |
+| Average score | **59/100** |
 | Repos with findings requiring review | 6 (67%) |
 | Clean (no findings) | 3 (33%) |
 
+> Scores reflect AgentShield v0.2.1 with smart false-positive detection — test files, deploy scripts, and CI configs are automatically identified and their findings downgraded.
+
 ## Results
 
-| Repository | Installs | Raw Score | Findings | Assessment |
-|------------|----------|-----------|----------|------------|
-| vercel-labs/agent-skills | 157K | 0 | 6 critical | ✅ **False positives** — deploy scripts legitimately use `curl` to Vercel API |
-| obra/superpowers | 94K | 0 | 3 crit, 25 warn | ⚠️ **Mostly test code** — server.test.js has HTTP + env patterns; render script uses exec() |
+| Repository | Installs | Score | Findings | Assessment |
+|------------|----------|-------|----------|------------|
+| vercel-labs/agent-skills | 157K | 40 | 6 warning (all FP) | ✅ **False positives** — deploy scripts legitimately use `curl` to Vercel API |
+| obra/superpowers | 94K | 45 | 1 crit, 3 warn (26 FP) | ⚠️ **Mostly test code** — server.test.js has HTTP + env patterns; render script uses exec() |
 | coreyhaines31/marketingskills | 42K | 0 | 122 crit, 206 warn | ⚠️ **By design** — 100+ CRM/analytics CLI tools each read API keys from env vars |
-| expo/skills | 11K | 5 | 1 crit, 7 warn | ⚠️ **Legitimate** — fetch script reads env for CI/CD workflow |
+| expo/skills | 11K | 30 | 7 warn (2 FP) | ⚠️ **Legitimate** — fetch script reads env for CI/CD workflow |
 | anthropics/skills | 36K | 35 | 1 crit, 4 warn | ⚠️ **Template code** — generator_template.js contains exec() for rendering |
 | remotion-dev/skills | 140K | 80 | 2 warn | ✅ **Low risk** — minor warnings only |
 | squirrelscan/skills | 34K | 100 | 0 | ✅ **Clean** — pure SKILL.md content |
@@ -32,9 +34,9 @@ We scanned **9 of the most popular skill repositories** on ClawHub, covering ski
 
 ## Detailed Analysis
 
-### vercel-labs/agent-skills — False Positives (Not Malicious)
+### vercel-labs/agent-skills — False Positives (Score: 40/100)
 
-All 6 critical findings come from `skills/deploy-to-vercel/resources/deploy.sh` and `deploy-codex.sh`. These are **deployment scripts** — their entire purpose is to:
+All 6 findings come from `skills/deploy-to-vercel/resources/deploy.sh` and `deploy-codex.sh`. AgentShield's FP detection correctly identifies these as **deploy scripts** and downgrades all 6 from critical to warning with "Likely false positive" annotations.
 1. Package code into a tarball
 2. POST it to the Vercel deployment API via `curl`
 3. Poll the preview URL for deployment status
