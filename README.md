@@ -1,8 +1,25 @@
 # 🛡️ AgentShield
 
-Security scanner for AI agent skills, MCP servers, and plugins.
+**Security scanner for AI agent skills, MCP servers, and plugins.**
 
-Catch data exfiltration, backdoors, privilege escalation, and supply chain vulnerabilities **before** they reach your agents.
+[![npm](https://img.shields.io/npm/v/@elliotllliu/agentshield)](https://www.npmjs.com/package/@elliotllliu/agentshield)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+Catch data exfiltration, backdoors, privilege escalation, credential leaks, and supply chain vulnerabilities **before** they reach your AI agents.
+
+> **We scanned the top ClawHub skill repos — the average security score was 47/100.** [Read the full report →](docs/clawhub-security-report.md)
+
+## Why AgentShield?
+
+AI agents install and execute third-party skills, MCP servers, and plugins with minimal security review. A single malicious skill can:
+
+- 🔑 **Steal credentials** — SSH keys, AWS secrets, API tokens
+- 📤 **Exfiltrate data** — read sensitive files and send them to external servers
+- 💀 **Open backdoors** — `eval()`, reverse shells, dynamic code execution
+- ⛏️ **Mine crypto** — hijack compute for cryptocurrency mining
+- 🕵️ **Bypass permissions** — claim "read-only" but execute shell commands
+
+AgentShield catches these patterns with **16 security rules** in under 50ms.
 
 ## Quick Start
 
@@ -10,27 +27,55 @@ Catch data exfiltration, backdoors, privilege escalation, and supply chain vulne
 npx @elliotllliu/agentshield scan ./my-skill/
 ```
 
-## What It Detects
+No installation required. Works with Node.js 18+.
 
-| Rule | Severity | Description |
-|------|----------|-------------|
-| `data-exfil` | 🔴 Critical | Reads sensitive files (SSH keys, credentials) + sends HTTP requests |
-| `backdoor` | 🔴 Critical | `eval()`, `new Function()`, `child_process.exec()` with dynamic input |
-| `reverse-shell` | 🔴 Critical | Outbound socket connections piped to shell |
-| `crypto-mining` | 🔴 Critical | Mining pool connections, known miners (xmrig, coinhive) |
-| `credential-hardcode` | 🔴 Critical | Hardcoded AWS keys, GitHub PATs, Stripe keys, private keys |
-| `env-leak` | 🔴 Critical | `process.env` access + outbound HTTP (environment variable exfil) |
-| `obfuscation` | 🔴 Critical | base64 + eval combos, hex-encoded strings, `String.fromCharCode` |
-| `typosquatting` | 🔴 Critical | Suspicious npm package names (e.g. `1odash` instead of `lodash`) |
-| `hidden-files` | 🔴 Critical | `.env` files with secrets committed to repo |
-| `network-ssrf` | 🟡 Warning | User-controlled URLs in fetch, AWS metadata endpoint access |
-| `privilege` | 🟡 Warning | SKILL.md declares `read` but code calls `exec` |
-| `supply-chain` | 🟡 Warning | Known CVEs in npm dependencies (`npm audit`) |
-| `sensitive-read` | 🟡 Warning | Accesses `~/.ssh/id_rsa`, `~/.aws/credentials`, etc. |
-| `excessive-perms` | 🟡 Warning | Too many or dangerous permissions in SKILL.md |
-| `phone-home` | 🟡 Warning | Periodic timers + HTTP requests (beacon/heartbeat pattern) |
-| `mcp-manifest` | 🟡 Warning | MCP server: wildcard perms, undeclared capabilities, suspicious tool descriptions |
-| `mcp-manifest` | 🟡 Warning | MCP server tool/resource declarations vs actual code behavior |
+## What It Detects — 16 Security Rules
+
+### 🔴 Critical (auto-fail)
+
+| Rule | Detects |
+|------|---------|
+| `data-exfil` | Reads sensitive files + sends HTTP requests (exfiltration pattern) |
+| `backdoor` | `eval()`, `new Function()`, `child_process.exec()` with dynamic input |
+| `reverse-shell` | Outbound socket connections piped to `/bin/sh` |
+| `crypto-mining` | Mining pool connections, xmrig, coinhive patterns |
+| `credential-hardcode` | Hardcoded AWS keys (`AKIA...`), GitHub PATs (`ghp_...`), Stripe keys |
+| `env-leak` | `process.env` secrets + outbound HTTP (environment variable theft) |
+| `obfuscation` | `eval(atob(...))`, hex strings, `String.fromCharCode` obfuscation |
+| `typosquatting` | Suspicious npm names: `1odash` → `lodash`, `axois` → `axios` |
+| `hidden-files` | `.env` files with `PASSWORD`, `SECRET`, `API_KEY` committed to repo |
+
+### 🟡 Warning (review recommended)
+
+| Rule | Detects |
+|------|---------|
+| `network-ssrf` | User-controlled URLs in fetch, AWS metadata endpoint access |
+| `privilege` | SKILL.md permissions vs actual code behavior mismatch |
+| `supply-chain` | Known CVEs in npm dependencies (`npm audit`) |
+| `sensitive-read` | Access to `~/.ssh/id_rsa`, `~/.aws/credentials`, `~/.kube/config` |
+| `excessive-perms` | Too many or dangerous permissions in SKILL.md |
+| `phone-home` | `setInterval` + HTTP requests (beacon/C2 heartbeat pattern) |
+| `mcp-manifest` | MCP server: wildcard perms, undeclared capabilities, suspicious tool descriptions |
+
+## Real-World Results
+
+We scanned the **top 9 ClawHub skill repositories** (700K+ combined installs):
+
+| Repository | Installs | Score | Risk |
+|------------|----------|-------|------|
+| vercel-labs/agent-skills | 157K | 🔴 0/100 | Critical — deploy scripts with `$(curl)` command substitution |
+| obra/superpowers | 94K | 🔴 0/100 | Critical — dynamic code execution in render scripts |
+| coreyhaines31/marketingskills | 42K | 🔴 0/100 | Critical — 122 critical findings (CRM credential patterns) |
+| anthropics/skills | 36K | 🔴 35/100 | Critical — template with exec() |
+| expo/skills | 11K | 🔴 5/100 | Critical — fetch script reads env vars |
+| remotion-dev/skills | 140K | 🟡 80/100 | Moderate — minor warnings |
+| google-labs-code/stitch-skills | 63K | ✅ 100/100 | Clean |
+| supercent-io/skills-template | 106K | ✅ 100/100 | Clean |
+| squirrelscan/skills | 34K | ✅ 100/100 | Clean |
+
+**Average score: 47/100** — over half of popular skill repos have critical security findings.
+
+[📊 Full security report →](docs/clawhub-security-report.md)
 
 ## Example Output
 
@@ -39,80 +84,47 @@ npx @elliotllliu/agentshield scan ./my-skill/
 📁 Scanned: ./my-skill/ (3 files, 44 lines)
 
 🔴 CRITICAL (3)
-  ├─ index.ts:13 — [data-exfil] Reads sensitive data and sends HTTP request — possible exfiltration
+  ├─ index.ts:13 — [data-exfil] Reads sensitive data and sends HTTP request
   ├─ index.ts:20 — [backdoor] eval() with dynamic input
-  └─ index.ts:25 — [backdoor] child_process.exec() — use execFile instead
+  └─ backdoor.sh:6 — [backdoor] shell eval with variable
 
 🟡 WARNING (2)
   ├─ index.ts:23 — [privilege] Code uses 'exec' but SKILL.md doesn't declare it
   └─ index.ts:6  — [sensitive-read] Accesses SSH private key
 
-🟢 INFO (1)
-  └─ SKILL.md — [privilege] Detected capabilities: exec, read, web_fetch
-
 ✅ Score: 0/100 (Critical Risk)
+⏱  16ms
 ```
 
 ## Usage
 
 ```bash
 # Scan a directory
-agentshield scan ./path/to/skill/
+npx @elliotllliu/agentshield scan ./path/to/skill/
 
-# JSON output (for CI/CD)
-agentshield scan ./skill/ --json
+# JSON output (for CI/CD pipelines)
+npx @elliotllliu/agentshield scan ./skill/ --json
 
-# Fail CI if score is below threshold
-agentshield scan ./skill/ --fail-under 70
+# Fail CI if score drops below threshold
+npx @elliotllliu/agentshield scan ./skill/ --fail-under 70
 
 # Disable specific rules
-agentshield scan ./skill/ --disable supply-chain,phone-home
+npx @elliotllliu/agentshield scan ./skill/ --disable supply-chain,phone-home
 
 # Only run specific rules
-agentshield scan ./skill/ --enable backdoor,data-exfil
-
-# Shorthand (directory as first arg)
-agentshield ./skill/
+npx @elliotllliu/agentshield scan ./skill/ --enable backdoor,data-exfil
 
 # Generate config files
-agentshield init
+npx @elliotllliu/agentshield init
 
-# Watch mode (re-scan on changes)
-agentshield watch ./skill/
+# Watch mode — re-scan on file changes
+npx @elliotllliu/agentshield watch ./skill/
 
 # Compare two versions
-agentshield compare ./skill-v1/ ./skill-v2/
-```
+npx @elliotllliu/agentshield compare ./skill-v1/ ./skill-v2/
 
-## Configuration
-
-Create `.agentshield.yml` in your project (or run `agentshield init`):
-
-```yaml
-rules:
-  disable:
-    - supply-chain    # skip npm audit
-    - phone-home      # allow periodic HTTP
-
-severity:
-  sensitive-read: info   # downgrade to info
-
-failUnder: 70   # CI threshold
-
-ignore:
-  - "tests/**"
-  - "*.test.ts"
-```
-
-### `.agentshieldignore`
-
-Exclude files from scanning (same syntax as `.gitignore`):
-
-```
-node_modules/
-dist/
-*.test.ts
-__tests__/
+# Generate a security badge for your README
+npx @elliotllliu/agentshield badge ./skill/
 ```
 
 ## CI Integration
@@ -141,55 +153,103 @@ jobs:
   run: npx -y @elliotllliu/agentshield scan ./skills/ --fail-under 70
 ```
 
-### Action Inputs
+### Action Inputs & Outputs
 
 | Input | Default | Description |
 |-------|---------|-------------|
 | `path` | `.` | Directory to scan |
-| `fail-under` | *(none)* | Fail if score is below threshold (0-100) |
-| `format` | `terminal` | Output format: `terminal` or `json` |
-
-### Action Outputs
+| `fail-under` | — | Fail if score < threshold (0-100) |
+| `format` | `terminal` | `terminal` or `json` |
 
 | Output | Description |
 |--------|-------------|
 | `score` | Security score (0-100) |
 | `findings` | Number of findings |
 
+## Configuration
+
+Create `.agentshield.yml` (or run `agentshield init`):
+
+```yaml
+rules:
+  disable:
+    - supply-chain    # skip npm audit
+    - phone-home      # allow periodic HTTP
+
+severity:
+  sensitive-read: info   # downgrade to info
+
+failUnder: 70   # CI threshold
+
+ignore:
+  - "tests/**"
+  - "*.test.ts"
+```
+
+### `.agentshieldignore`
+
+```
+node_modules/
+dist/
+*.test.ts
+__tests__/
+```
+
 ## Scoring
 
-Starts at 100, deducts per finding:
+| Severity | Points Deducted |
+|----------|----------------|
+| 🔴 Critical | -25 |
+| 🟡 Warning | -10 |
+| 🟢 Info | 0 |
 
-| Severity | Deduction |
+| Score | Risk Level | Recommendation |
+|-------|------------|----------------|
+| 90-100 | ✅ Low Risk | Safe to install |
+| 70-89 | 🟡 Moderate | Review warnings |
+| 40-69 | 🟠 High Risk | Investigate before using |
+| 0-39 | 🔴 Critical | Do not install |
+
+## Supported Platforms
+
+- **AI Agent Skills** — OpenClaw, Codex, Claude Code
+- **MCP Servers** — Model Context Protocol tool servers
+- **npm Packages** — any npm package with executable code
+- **General** — any directory with JS/TS/Python/Shell code
+
+### Supported File Types
+
+| Language | Extensions |
 |----------|-----------|
-| Critical | -25 |
-| Warning | -10 |
-| Info | 0 |
+| JavaScript/TypeScript | `.js`, `.ts`, `.mjs`, `.cjs`, `.tsx`, `.jsx` |
+| Python | `.py` |
+| Shell | `.sh`, `.bash`, `.zsh` |
+| Config | `.json`, `.yaml`, `.yml`, `.toml` |
+| Docs | `SKILL.md` (permission analysis) |
 
-| Score | Risk Level |
-|-------|------------|
-| 90-100 | Low Risk ✅ |
-| 70-89 | Moderate Risk 🟡 |
-| 40-69 | High Risk 🟠 |
-| 0-39 | Critical Risk 🔴 |
+## Comparison with Other Tools
 
-## Supported File Types
+| Feature | AgentShield | npm audit | Snyk | ESLint Security |
+|---------|------------|-----------|------|-----------------|
+| AI skill/MCP specific rules | ✅ | ❌ | ❌ | ❌ |
+| Data exfiltration detection | ✅ | ❌ | ❌ | ❌ |
+| Permission mismatch (SKILL.md) | ✅ | ❌ | ❌ | ❌ |
+| Credential hardcode detection | ✅ | ❌ | ✅ | ✅ |
+| Supply chain CVEs | ✅ | ✅ | ✅ | ❌ |
+| Zero config | ✅ | ✅ | ❌ | ❌ |
+| No API key required | ✅ | ✅ | ❌ | ✅ |
+| < 50ms scan time | ✅ | ❌ | ❌ | ❌ |
 
-- **JavaScript/TypeScript**: `.js`, `.ts`, `.mjs`, `.cjs`, `.tsx`, `.jsx`
-- **Python**: `.py`
-- **Shell**: `.sh`, `.bash`, `.zsh`
-- **Config**: `.json`, `.yaml`, `.yml`, `.toml`
-- **Docs**: `SKILL.md` (permission analysis)
+## Contributing
 
-## Roadmap
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new rules.
 
-- [ ] AST-based analysis (tree-sitter for multi-language support)
-- [ ] MCP server manifest validation
-- [ ] Custom rule plugins
-- [ ] `agentshield init` — generate security policy
-- [ ] Sarif output for GitHub Code Scanning
-- [ ] Python `pip-audit` integration
-- [ ] Watch mode for development
+## Links
+
+- 📦 [npm](https://www.npmjs.com/package/@elliotllliu/agentshield)
+- 📖 [Rule Documentation](docs/rules.md)
+- 📊 [ClawHub Security Report](docs/clawhub-security-report.md)
+- 🇨🇳 [中文 README](README.zh-CN.md)
 
 ## License
 

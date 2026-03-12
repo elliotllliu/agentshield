@@ -12,7 +12,34 @@
     "test": "node --import tsx --test tests/**/*.test.ts",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["security", "ai-agent", "skill", "mcp", "scanner", "audit", "openclaw"],
+  "keywords": [
+    "security",
+    "scanner",
+    "ai-agent",
+    "skill",
+    "mcp",
+    "plugin",
+    "vulnerability",
+    "audit",
+    "backdoor",
+    "data-exfiltration",
+    "credential-leak",
+    "static-analysis",
+    "codex",
+    "claude",
+    "openai",
+    "github-action",
+    "cli",
+    "npm",
+    "ai-safety",
+    "supply-chain",
+    "reverse-shell",
+    "typosquatting",
+    "ssrf",
+    "openclaw",
+    "clawhub",
+    "model-context-protocol"
+  ],
   "author": "Elliot Liu",
   "license": "MIT",
   "dependencies": {
@@ -29,5 +56,17 @@
   "engines": {
     "node": ">=18"
   },
-  "files": ["dist", "README.md", "LICENSE"]
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elliotllliu/agentshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/elliotllliu/agentshield/issues"
+  },
+  "homepage": "https://github.com/elliotllliu/agentshield#readme"
 }
