@@ -7,7 +7,7 @@
 
 Catch data exfiltration, backdoors, privilege escalation, credential leaks, and supply chain vulnerabilities **before** they reach your AI agents.
 
-> **We scanned the top ClawHub skill repos — the average security score was 47/100.** [Read the full report →](docs/clawhub-security-report.md)
+> **We scanned the top ClawHub skill repos to understand the security surface area.** Many findings are false positives from legitimate code (API integrations, deploy scripts), but they highlight patterns that malicious skills could exploit. [Read the full report →](docs/clawhub-security-report.md)
 
 ## Why AgentShield?
 
@@ -57,25 +57,22 @@ No installation required. Works with Node.js 18+.
 | `phone-home` | `setInterval` + HTTP requests (beacon/C2 heartbeat pattern) |
 | `mcp-manifest` | MCP server: wildcard perms, undeclared capabilities, suspicious tool descriptions |
 
-## Real-World Results
+## Real-World Scan Data
 
-We scanned the **top 9 ClawHub skill repositories** (700K+ combined installs):
+We scanned the **top 9 ClawHub skill repositories** (700K+ combined installs). Most findings are **false positives from legitimate code** (deploy scripts, API integrations), but they demonstrate patterns that malicious skills could replicate:
 
-| Repository | Installs | Score | Risk |
-|------------|----------|-------|------|
-| vercel-labs/agent-skills | 157K | 🔴 0/100 | Critical — deploy scripts with `$(curl)` command substitution |
-| obra/superpowers | 94K | 🔴 0/100 | Critical — dynamic code execution in render scripts |
-| coreyhaines31/marketingskills | 42K | 🔴 0/100 | Critical — 122 critical findings (CRM credential patterns) |
-| anthropics/skills | 36K | 🔴 35/100 | Critical — template with exec() |
-| expo/skills | 11K | 🔴 5/100 | Critical — fetch script reads env vars |
-| remotion-dev/skills | 140K | 🟡 80/100 | Moderate — minor warnings |
-| google-labs-code/stitch-skills | 63K | ✅ 100/100 | Clean |
-| supercent-io/skills-template | 106K | ✅ 100/100 | Clean |
-| squirrelscan/skills | 34K | ✅ 100/100 | Clean |
+| Repository | Installs | Raw Score | Assessment |
+|------------|----------|-----------|------------|
+| vercel-labs/agent-skills | 157K | 0 | ✅ False positives — deploy scripts use `curl` legitimately |
+| obra/superpowers | 94K | 0 | ⚠️ Test code + render exec() |
+| coreyhaines31/marketingskills | 42K | 0 | ⚠️ 100+ API wrapper tools (legitimate credential access) |
+| anthropics/skills | 36K | 35 | ⚠️ Template contains exec() |
+| google-labs-code/stitch-skills | 63K | 100 | ✅ Clean |
+| supercent-io/skills-template | 106K | 100 | ✅ Clean |
 
-**Average score: 47/100** — over half of popular skill repos have critical security findings.
+**Key insight:** Legitimate deploy scripts and API integrations produce the same code patterns as malicious data exfiltration. This is why manual review is essential — AgentShield flags patterns for review, not verdicts.
 
-[📊 Full security report →](docs/clawhub-security-report.md)
+[📊 Full analysis with detailed assessment →](docs/clawhub-security-report.md)
 
 ## Example Output
 
