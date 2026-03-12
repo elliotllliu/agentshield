@@ -1,0 +1,57 @@
+import type { Rule, Finding, ScannedFile } from "../types.js";
+
+/**
+ * Rule: network-ssrf
+ * Detects Server-Side Request Forgery patterns — user-controlled URLs in HTTP requests.
+ */
+
+const SSRF_PATTERNS: Array<{ pattern: RegExp; desc: string; severity: "critical" | "warning" }> = [
+  // Template literals in fetch/request
+  { pattern: /fetch\s*\(\s*`[^`]*\$\{/, desc: "fetch() with template literal URL — potential SSRF", severity: "warning" },
+  { pattern: /axios\.\w+\s*\(\s*`[^`]*\$\{/, desc: "axios with template literal URL — potential SSRF", severity: "warning" },
+  { pattern: /http\.request\s*\(\s*`[^`]*\$\{/, desc: "http.request with template literal URL — potential SSRF", severity: "warning" },
+  // URL constructed from user input
+  { pattern: /new\s+URL\s*\(\s*(?:req\.|request\.|params\.|query\.|body\.)/, desc: "URL from request parameters — potential SSRF", severity: "critical" },
+  { pattern: /fetch\s*\(\s*(?:req\.|request\.|params\.|query\.|body\.)/, desc: "fetch() with request parameter — potential SSRF", severity: "critical" },
+  // Redirect to user-controlled URL
+  { pattern: /redirect\s*\(\s*(?:req\.|request\.|params\.|query\.)/, desc: "Open redirect — user-controlled redirect URL", severity: "warning" },
+  // Internal network access patterns
+  { pattern: /127\.0\.0\.1|0\.0\.0\.0|localhost.*fetch|fetch.*localhost/i, desc: "Request to localhost — verify if intentional", severity: "warning" },
+  { pattern: /169\.254\.169\.254/, desc: "AWS metadata endpoint access — potential SSRF", severity: "critical" },
+];
+
+export const networkSsrfRule: Rule = {
+  id: "network-ssrf",
+  name: "Server-Side Request Forgery",
+  description: "Detects user-controlled URLs in HTTP requests and internal network access",
+
+  run(files: ScannedFile[]): Finding[] {
+    const findings: Finding[] = [];
+
+    for (const file of files) {
+      if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".md") continue;
+
+      for (let i = 0; i < file.lines.length; i++) {
+        const line = file.lines[i]!;
+        const trimmed = line.trimStart();
+        if (trimmed.startsWith("//") || trimmed.startsWith("#")) continue;
+
+        for (const { pattern, desc, severity } of SSRF_PATTERNS) {
+          if (pattern.test(line)) {
+            findings.push({
+              rule: "network-ssrf",
+              severity,
+              file: file.relativePath,
+              line: i + 1,
+              message: desc,
+              evidence: line.trim().slice(0, 120),
+            });
+            break;
+          }
+        }
+      }
+    }
+
+    return findings;
+  },
+};

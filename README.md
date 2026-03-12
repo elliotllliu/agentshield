@@ -16,9 +16,19 @@ npx agentshield scan ./my-skill/
 |------|----------|-------------|
 | `data-exfil` | 🔴 Critical | Reads sensitive files (SSH keys, credentials) + sends HTTP requests |
 | `backdoor` | 🔴 Critical | `eval()`, `new Function()`, `child_process.exec()` with dynamic input |
+| `reverse-shell` | 🔴 Critical | Outbound socket connections piped to shell |
+| `crypto-mining` | 🔴 Critical | Mining pool connections, known miners (xmrig, coinhive) |
+| `credential-hardcode` | 🔴 Critical | Hardcoded AWS keys, GitHub PATs, Stripe keys, private keys |
+| `env-leak` | 🔴 Critical | `process.env` access + outbound HTTP (environment variable exfil) |
+| `obfuscation` | 🔴 Critical | base64 + eval combos, hex-encoded strings, `String.fromCharCode` |
+| `typosquatting` | 🔴 Critical | Suspicious npm package names (e.g. `1odash` instead of `lodash`) |
+| `hidden-files` | 🔴 Critical | `.env` files with secrets committed to repo |
+| `network-ssrf` | 🟡 Warning | User-controlled URLs in fetch, AWS metadata endpoint access |
 | `privilege` | 🟡 Warning | SKILL.md declares `read` but code calls `exec` |
 | `supply-chain` | 🟡 Warning | Known CVEs in npm dependencies (`npm audit`) |
 | `sensitive-read` | 🟡 Warning | Accesses `~/.ssh/id_rsa`, `~/.aws/credentials`, etc. |
+| `excessive-perms` | 🟡 Warning | Too many or dangerous permissions in SKILL.md |
+| `phone-home` | 🟡 Warning | Periodic timers + HTTP requests (beacon/heartbeat pattern) |
 
 ## Example Output
 
