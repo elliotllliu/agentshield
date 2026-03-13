@@ -1,0 +1,21 @@
+{
+  "name": "AgentShield",
+  "description": "Automatically scan PRs for AI agent security vulnerabilities — backdoors, data exfiltration, prompt injection, and more.",
+  "url": "https://github.com/elliotllliu/agent-shield",
+  "hook_attributes": {
+    "url": "https://your-deployment.com/api/github/webhooks"
+  },
+  "redirect_url": "https://your-deployment.com/setup",
+  "public": true,
+  "default_events": [
+    "pull_request",
+    "check_run"
+  ],
+  "default_permissions": {
+    "checks": "write",
+    "contents": "read",
+    "issues": "write",
+    "pull_requests": "write",
+    "metadata": "read"
+  }
+}

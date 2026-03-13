@@ -1,0 +1,24 @@
+{
+  "name": "agent-shield-github-app",
+  "version": "1.0.0",
+  "description": "GitHub App that automatically scans PRs for AI agent security issues using AgentShield",
+  "author": "Elliot Liu",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "probot run ./dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@elliotllliu/agent-shield": "latest",
+    "probot": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
