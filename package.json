@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "node --import tsx --test 'tests/*.test.ts'",
+    "test": "find tests -name '*.test.ts' | sort | xargs node --import tsx --test",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
