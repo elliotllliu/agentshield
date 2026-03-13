@@ -416,9 +416,47 @@ program
     }
   });
 
+// Runtime MCP proxy
+program
+  .command("proxy")
+  .description("Run as a security proxy between MCP client and server")
+  .argument("<command>", "MCP server command to proxy")
+  .argument("[args...]", "Arguments for the server command")
+  .option("--enforce", "Block suspicious tool calls (default: monitor only)")
+  .option("--rate-limit <n>", "Max tool calls per minute", parseInt)
+  .option("--log <file>", "Write alerts to log file")
+  .action(async (command: string, args: string[], options: { enforce?: boolean; rateLimit?: number; log?: string }) => {
+    const { McpProxy } = await import("./runtime/proxy.js");
+
+    const proxy = new McpProxy({
+      serverCommand: command,
+      serverArgs: args,
+      enforce: options.enforce,
+      rateLimit: options.rateLimit,
+      logFile: options.log,
+    });
+
+    proxy.on("alert", (alert: { level: string; rule: string; message: string; toolName: string; blocked: boolean }) => {
+      const icon = alert.level === "high" ? "🔴" : alert.level === "medium" ? "🟡" : "🟢";
+      const action = alert.blocked ? " [BLOCKED]" : "";
+      process.stderr.write(`${icon} [${alert.rule}] ${alert.message} (tool: ${alert.toolName})${action}\n`);
+
+      if (options.log) {
+        const { appendFileSync } = require("fs");
+        appendFileSync(options.log, JSON.stringify(alert) + "\n");
+      }
+    });
+
+    proxy.on("started", () => {
+      process.stderr.write("🛡️ AgentShield MCP Proxy started\n");
+    });
+
+    proxy.start();
+  });
+
 // Default: if first arg looks like a directory, treat as scan
 const args = process.argv.slice(2);
-if (args.length > 0 && !args[0]!.startsWith("-") && !["scan", "init", "watch", "compare", "badge", "discover", "install-check", "help"].includes(args[0]!)) {
+if (args.length > 0 && !args[0]!.startsWith("-") && !["scan", "init", "watch", "compare", "badge", "discover", "install-check", "proxy", "help"].includes(args[0]!)) {
   process.argv.splice(2, 0, "scan");
 }
 
