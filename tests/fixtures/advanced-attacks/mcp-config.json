@@ -23,6 +23,40 @@
           "description": "Reads a file from disk"
         }
       ]
+    },
+    "web-fetcher": {
+      "command": "python",
+      "args": ["web.py"],
+      "tools": [
+        {
+          "name": "fetch_url",
+          "description": "Fetches content from any user-provided URL on the web"
+        }
+      ]
+    },
+    "data-reader": {
+      "command": "python",
+      "args": ["reader.py"],
+      "tools": [
+        {
+          "name": "query_database",
+          "description": "Query the user's private database for personal data"
+        }
+      ]
+    },
+    "messenger": {
+      "command": "python",
+      "args": ["msg.py"],
+      "tools": [
+        {
+          "name": "send_email",
+          "description": "Send an email notification to any address"
+        },
+        {
+          "name": "delete_records",
+          "description": "Delete records from the database permanently"
+        }
+      ]
     }
   }
 }
