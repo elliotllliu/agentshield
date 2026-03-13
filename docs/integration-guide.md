@@ -1,63 +1,149 @@
-# Integration Guide: Add AgentShield Security Scanning to Your Platform
+# Integrate AgentShield Into Your Platform
 
-> This document explains how to integrate AgentShield security scanning into any skill directory, marketplace, or registry platform. It is written for both humans and AI agents to follow.
+> Add security scanning to your skill directory, MCP marketplace, or plugin registry. Every listing gets a trust score — your users get peace of mind.
+
+---
+
+## Why Integrate
+
+Skill directories list thousands of community-contributed tools. Users install them into AI agents that have access to files, credentials, and APIs. **One malicious skill can steal everything.**
+
+Snyk's 2026 research found **36% of audited agent skills contained security flaws** — 1,467 malicious payloads across a single registry.
+
+By integrating AgentShield, your platform becomes the first directory where users can **verify before they install**.
+
+## What Your Users See
+
+### Skill Card
+
+```
+┌──────────────────────────────────────────┐
+│  📦 awesome-filesystem-tool      ⭐ 342  │
+│  by someauthor                           │
+│                                          │
+│  File system access for AI agents.       │
+│                                          │
+│  🛡️ 92/100 🟢 Verified Safe             │
+│  Scanned Mar 13, 2026                    │
+└──────────────────────────────────────────┘
+```
+
+### Security Detail Page
+
+```
+Security Report
+━━━━━━━━━━━━━━━
+Score:       92/100
+Risk Level:  🟢 Low Risk
+Scanned:     2026-03-13
+Files:       12 files, 1,847 lines
+
+Findings (1):
+  🟡 MEDIUM  env-leak
+     src/config.ts:15
+     "Environment variable access with outbound HTTP"
+
+Passed Rules (29/30):
+  ✅ backdoor  ✅ data-exfil  ✅ reverse-shell
+  ✅ prompt-injection  ✅ tool-shadowing  ...
+
+Powered by AgentShield
+github.com/elliotllliu/agent-shield
+```
+
+### Score Tiers
+
+| Score | Badge | Meaning |
+|-------|-------|---------|
+| 90-100 | 🟢 Verified Safe | No high-risk findings |
+| 70-89 | 🟡 Review Advised | Has warnings, generally safe |
+| 40-69 | 🟠 High Risk | Investigate before using |
+| 0-39 | 🔴 Critical Risk | Do not install without review |
+
+### Search & Filter
+
+Your users can:
+- Filter by risk level: show only 🟢 verified skills
+- Sort by security score
+- Hide 🔴 critical skills by default
 
 ## What You Get
 
-Every skill/plugin/MCP server on your platform gets:
-- A **security score** (0-100)
-- A **risk level** (🟢 Low / 🟡 Moderate / 🟠 High / 🔴 Critical)
-- A **list of findings** with file, line, rule, severity, and evidence
-- A **scan timestamp** for freshness
+- **Trust differentiation** — no other directory does this
+- **Free scanning** — AgentShield is MIT-licensed, runs 100% offline
+- **Zero data sharing** — nothing leaves your server
+- **Fast** — ~200ms per skill, 19,000 skills in ~16 minutes (4 parallel)
+
+## Attribution
+
+Include on scanned pages:
+
+```
+🛡️ Security scan powered by AgentShield
+   https://github.com/elliotllliu/agent-shield
+```
+
+---
+
+# Technical Integration Guide
+
+> The section below is for developers and AI agents implementing the integration. It contains the exact commands, JSON schema, code examples, and edge cases needed to build this.
 
 ## Prerequisites
 
-- Node.js 18+ installed on your server
-- Ability to `git clone` repositories
+- Node.js 18+
+- Git (for cloning repos)
 - ~50MB temp disk per scan (cleaned up after)
 
-## Step 1: Install
+## Install
 
 ```bash
 npm install -g @elliotllliu/agent-shield
 ```
 
-Or use npx (no install needed):
+Or use npx (no global install):
 
 ```bash
 npx -y @elliotllliu/agent-shield scan ./path --json
 ```
 
-## Step 2: Scan a Skill
+## Scan a Skill
 
-### From a GitHub URL
+### Basic Flow
 
 ```bash
-# Clone the repo (shallow, minimal disk)
+# 1. Clone the repo (shallow)
 git clone --depth 1 https://github.com/owner/repo.git /tmp/scan-target
 
-# Run the scan
+# 2. Scan and get JSON
 agent-shield scan /tmp/scan-target --json > result.json
 
-# Clean up
+# 3. Clean up
 rm -rf /tmp/scan-target
 ```
 
-### From a Local Directory
+### CLI Options
 
 ```bash
-agent-shield scan ./my-skill --json > result.json
+agent-shield scan <path> [options]
+
+Options:
+  --json                Output JSON (required for integration)
+  --fail-under <score>  Exit code 1 if score below threshold
+  --disable <rules>     Comma-separated rules to skip
+  --enable <rules>      Only run these rules
 ```
 
-## Step 3: Parse the JSON Output
-
-AgentShield outputs a JSON object with this schema:
+## JSON Output Schema
 
 ```json
 {
   "target": "/tmp/scan-target",
   "filesScanned": 12,
   "linesScanned": 1847,
+  "score": 85,
+  "riskLevel": "moderate",
+  "scanTimeMs": 234,
   "findings": [
     {
       "rule": "env-leak",
@@ -80,227 +166,244 @@ AgentShield outputs a JSON object with this schema:
       "falsePositiveReason": "Documentation file — code examples commonly trigger patterns",
       "confidence": "low"
     }
-  ],
-  "score": 85,
-  "riskLevel": "moderate",
-  "scanTimeMs": 234
+  ]
 }
 ```
 
-### Field Reference
+### Top-Level Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `target` | string | Path that was scanned |
 | `filesScanned` | number | Total files analyzed |
 | `linesScanned` | number | Total lines analyzed |
-| `score` | number | 0-100 security score |
-| `riskLevel` | string | `"low"` / `"moderate"` / `"high"` / `"critical"` |
+| `score` | number (0-100) | Security score. Higher = safer |
+| `riskLevel` | string | One of: `"low"`, `"moderate"`, `"high"`, `"critical"` |
 | `scanTimeMs` | number | Scan duration in milliseconds |
-| `findings` | array | List of security findings (see below) |
+| `findings` | array | List of finding objects |
 
-### Finding Object
+### Finding Object Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `rule` | string | Rule ID (e.g., `"backdoor"`, `"data-exfil"`, `"prompt-injection"`) |
-| `severity` | string | `"high"` / `"medium"` / `"low"` |
-| `file` | string | File path relative to scan target |
-| `line` | number | Line number (may be absent for project-level findings) |
-| `message` | string | Human-readable description |
-| `evidence` | string | Code snippet or pattern that triggered the rule |
-| `confidence` | string | `"high"` / `"medium"` / `"low"` |
-| `possibleFalsePositive` | boolean | Whether the scanner suspects this is a false positive |
-| `falsePositiveReason` | string | Explanation of why it might be a false positive |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rule` | string | yes | Rule ID that triggered |
+| `severity` | string | yes | `"high"` / `"medium"` / `"low"` |
+| `file` | string | yes | File path relative to scan target |
+| `line` | number | no | Line number (absent for project-level findings) |
+| `message` | string | yes | Human-readable description |
+| `evidence` | string | no | Code snippet or pattern matched |
+| `confidence` | string | yes | `"high"` / `"medium"` / `"low"` |
+| `possibleFalsePositive` | boolean | no | `true` if scanner suspects false positive |
+| `falsePositiveReason` | string | no | Why it might be a false positive |
 
-### Score Tiers
+### Score Calculation
 
-| Score | Risk Level | Recommended Action |
-|-------|-----------|-------------------|
-| 90-100 | 🟢 `low` | Safe to install |
-| 70-89 | 🟡 `moderate` | Review warnings before using |
-| 40-69 | 🟠 `high` | Investigate findings before using |
-| 0-39 | 🔴 `critical` | Do not install without thorough review |
+| Severity | Points Deducted |
+|----------|----------------|
+| 🔴 High | -25 per finding |
+| 🟡 Medium | -8 per finding |
+| 🟢 Low | -2 per finding |
 
-### All Rule IDs
+Findings marked `possibleFalsePositive: true` are excluded from scoring.
 
-**Code Security:**
+### Risk Level Mapping
+
+| Score Range | riskLevel value |
+|-------------|----------------|
+| 90-100 | `"low"` |
+| 70-89 | `"moderate"` |
+| 40-69 | `"high"` |
+| 0-39 | `"critical"` |
+
+### All 30 Rule IDs
+
+**Code Security (6):**
 `data-exfil`, `backdoor`, `reverse-shell`, `crypto-mining`, `credential-hardcode`, `obfuscation`
 
-**Agent-Specific:**
+**Agent-Specific (8):**
 `prompt-injection`, `tool-shadowing`, `env-leak`, `network-ssrf`, `phone-home`, `toxic-flow`, `skill-risks`, `python-security`
 
-**Supply Chain & Config:**
+**Supply Chain & Config (7):**
 `privilege`, `supply-chain`, `sensitive-read`, `excessive-perms`, `mcp-manifest`, `typosquatting`, `hidden-files`
 
-**Advanced Analysis:**
+**Advanced Analysis (6):**
 `cross-file`, `attack-chain`, `multilang-injection`, `python-ast`, `description-integrity`, `mcp-runtime`
 
-## Step 4: Display on Your Platform
+**AI Deep Analysis (3, requires --ai flag):**
+`ai-backdoor`, `ai-data-exfil`, `ai-prompt-injection`
 
-### Skill Card (Minimal)
+## Code Examples
 
-Show on every skill listing card:
+### Node.js
 
+```javascript
+const { execSync } = require('child_process');
+const { mkdtempSync, rmSync } = require('fs');
+const { join } = require('os');
+
+function scanRepo(githubUrl) {
+  const tmpDir = mkdtempSync(join(require('os').tmpdir(), 'scan-'));
+
+  try {
+    // Clone (shallow, quiet)
+    execSync(`git clone --depth 1 "${githubUrl}" "${tmpDir}/repo"`, {
+      stdio: 'ignore',
+      timeout: 30000
+    });
+
+    // Scan
+    const output = execSync(
+      `npx -y @elliotllliu/agent-shield scan "${tmpDir}/repo" --json`,
+      { encoding: 'utf-8', timeout: 60000 }
+    );
+
+    return JSON.parse(output);
+  } catch (error) {
+    return {
+      score: null,
+      riskLevel: 'error',
+      findings: [],
+      error: error.message
+    };
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+// Usage
+const result = scanRepo('https://github.com/owner/repo');
+console.log(`Score: ${result.score}, Risk: ${result.riskLevel}`);
 ```
-🛡️ 92/100 🟢 Safe
+
+### Python
+
+```python
+import subprocess
+import json
+import tempfile
+import shutil
+
+def scan_repo(github_url):
+    tmp_dir = tempfile.mkdtemp(prefix='scan-')
+
+    try:
+        # Clone
+        subprocess.run(
+            ['git', 'clone', '--depth', '1', github_url, f'{tmp_dir}/repo'],
+            capture_output=True, timeout=30
+        )
+
+        # Scan
+        result = subprocess.run(
+            ['npx', '-y', '@elliotllliu/agent-shield', 'scan', f'{tmp_dir}/repo', '--json'],
+            capture_output=True, text=True, timeout=60
+        )
+
+        return json.loads(result.stdout)
+    except Exception as e:
+        return {'score': None, 'riskLevel': 'error', 'error': str(e)}
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+# Usage
+result = scan_repo('https://github.com/owner/repo')
+print(f"Score: {result['score']}, Risk: {result['riskLevel']}")
 ```
-
-### Skill Detail Page (Full)
-
-Show on the skill detail page:
-
-```
-Security Report
-━━━━━━━━━━━━━━━
-Score:       92/100
-Risk Level:  🟢 Low Risk
-Scanned:     2026-03-13
-Files:       12 files, 1,847 lines
-
-Findings (1):
-  🟡 MEDIUM  env-leak
-     src/config.ts:15
-     Environment variable access with outbound HTTP
-
-Passed Rules (29/30):
-  ✅ backdoor  ✅ data-exfil  ✅ reverse-shell
-  ✅ prompt-injection  ✅ tool-shadowing  ...
-
-Powered by AgentShield
-github.com/elliotllliu/agent-shield
-```
-
-### Search & Filter
-
-Add these filter options to your search:
-- Filter by risk level: `?risk=low` / `?risk=moderate` / `?risk=high`
-- Sort by score: `?sort=security_score`
-- Minimum score: `?min_score=70`
-
-## Step 5: Schedule Regular Scans
 
 ### Batch Scan Script
 
 ```bash
 #!/bin/bash
-# batch-scan.sh — Scan all skills in a list
+# batch-scan.sh — Scan all repos listed in a file
+# Usage: ./batch-scan.sh repos.txt results/
+# repos.txt format: one GitHub URL per line
 
-SKILLS_FILE="skills.txt"  # One GitHub URL per line
-RESULTS_DIR="./scan-results"
+REPOS_FILE="${1:-repos.txt}"
+RESULTS_DIR="${2:-./scan-results}"
+PARALLEL="${3:-4}"
+
 mkdir -p "$RESULTS_DIR"
 
-while IFS= read -r repo_url; do
-  slug=$(echo "$repo_url" | sed 's|.*/||')
-  echo "Scanning $slug..."
+scan_one() {
+  local url="$1"
+  local slug=$(echo "$url" | sed 's|.*/||' | sed 's|\.git$||')
+  local tmp="/tmp/scan-$$-$slug"
 
-  # Clone
-  git clone --depth 1 "$repo_url" "/tmp/$slug" 2>/dev/null
+  git clone --depth 1 "$url" "$tmp" 2>/dev/null
+  npx -y @elliotllliu/agent-shield scan "$tmp" --json > "$RESULTS_DIR/$slug.json" 2>/dev/null
+  rm -rf "$tmp"
+  echo "✓ $slug ($(jq -r .score "$RESULTS_DIR/$slug.json")/100)"
+}
 
-  # Scan
-  npx -y @elliotllliu/agent-shield scan "/tmp/$slug" --json > "$RESULTS_DIR/$slug.json" 2>/dev/null
+export -f scan_one
+export RESULTS_DIR
 
-  # Clean up
-  rm -rf "/tmp/$slug"
-
-  # Rate limit: avoid hammering GitHub
-  sleep 2
-done < "$SKILLS_FILE"
+cat "$REPOS_FILE" | xargs -P "$PARALLEL" -I {} bash -c 'scan_one "$@"' _ {}
 
 echo "Done. Results in $RESULTS_DIR/"
 ```
 
-### Scheduling
+## Database Schema (Suggested)
 
-| Event | Action |
-|-------|--------|
-| New skill indexed | Trigger scan immediately |
-| Weekly cron | Re-scan all skills to catch repo changes |
-| User request | "Re-scan" button triggers on-demand scan |
+```sql
+CREATE TABLE skill_scans (
+  id            SERIAL PRIMARY KEY,
+  skill_slug    VARCHAR(255) NOT NULL,
+  repo_url      VARCHAR(500),
+  score         INTEGER,          -- 0-100, NULL if scan failed
+  risk_level    VARCHAR(20),      -- low/moderate/high/critical/error
+  files_scanned INTEGER,
+  lines_scanned INTEGER,
+  scan_time_ms  INTEGER,
+  findings      JSONB,            -- Full findings array
+  scanned_at    TIMESTAMP DEFAULT NOW(),
+  UNIQUE(skill_slug)
+);
 
-### Performance Estimates
-
-| Scale | Time (sequential) | Time (4 parallel) |
-|-------|-------------------|-------------------|
-| 100 skills | ~20 seconds | ~5 seconds |
-| 1,000 skills | ~3 minutes | ~1 minute |
-| 10,000 skills | ~33 minutes | ~8 minutes |
-| 19,000 skills | ~63 minutes | ~16 minutes |
-
-## Step 6: Attribution
-
-Please include on scanned pages:
-
-```
-🛡️ Security scan powered by AgentShield
-   https://github.com/elliotllliu/agent-shield
+-- Index for filtering
+CREATE INDEX idx_risk ON skill_scans(risk_level);
+CREATE INDEX idx_score ON skill_scans(score);
 ```
 
-## Programmatic Usage (Node.js)
+## Scan Scheduling
 
-If your backend is Node.js, you can call AgentShield programmatically:
+| Trigger | When | Scope |
+|---------|------|-------|
+| New skill indexed | Immediately | Single skill |
+| Weekly cron | Every Sunday 03:00 UTC | All skills |
+| User clicks "Re-scan" | On demand | Single skill |
+| Repo updated (webhook) | On push event | Single skill |
 
-```javascript
-const { execSync } = require('child_process');
+## Edge Cases
 
-function scanSkill(repoPath) {
-  try {
-    const output = execSync(
-      `npx -y @elliotllliu/agent-shield scan "${repoPath}" --json`,
-      { encoding: 'utf-8', timeout: 30000 }
-    );
-    return JSON.parse(output);
-  } catch (error) {
-    return { score: null, riskLevel: 'error', error: error.message };
-  }
-}
-
-// Usage
-const result = scanSkill('/tmp/my-cloned-repo');
-console.log(`Score: ${result.score}, Risk: ${result.riskLevel}`);
-console.log(`Findings: ${result.findings.length}`);
-```
-
-## Python Usage
-
-```python
-import subprocess
-import json
-
-def scan_skill(repo_path):
-    try:
-        result = subprocess.run(
-            ['npx', '-y', '@elliotllliu/agent-shield', 'scan', repo_path, '--json'],
-            capture_output=True, text=True, timeout=30
-        )
-        return json.loads(result.stdout)
-    except Exception as e:
-        return {'score': None, 'riskLevel': 'error', 'error': str(e)}
-
-# Usage
-result = scan_skill('/tmp/my-cloned-repo')
-print(f"Score: {result['score']}, Risk: {result['riskLevel']}")
-```
+| Situation | Behavior |
+|-----------|----------|
+| Empty repo | Returns `score: 100`, zero findings |
+| Binary-only repo | Scans any text files found, ignores binaries |
+| Very large repo (>100MB) | Use `--depth 1` clone; scan still works but takes longer |
+| No internet | Works fine — AgentShield is 100% offline |
+| Scan timeout | Set timeout to 60s per scan; catch error and mark as `"error"` |
+| Private repo | Requires git auth; most skills are public |
 
 ## FAQ
 
-**Q: Does AgentShield send data to any server?**
-A: No. All scanning is 100% offline. No telemetry, no API calls, no data leaves your machine.
+**Q: Does AgentShield phone home?**
+A: No. Zero network calls. Everything runs locally.
 
-**Q: What languages does it scan?**
-A: JavaScript, TypeScript, Python, YAML, JSON, Markdown, and shell scripts.
+**Q: What file types are scanned?**
+A: `.js`, `.ts`, `.py`, `.yaml`, `.yml`, `.json`, `.md`, `.sh`, `.toml`, and more.
 
-**Q: What about false positives?**
-A: Findings with `possibleFalsePositive: true` are likely false positives (e.g., code examples in documentation). Filter these out for your score display if desired.
+**Q: How to handle false positives?**
+A: Findings with `possibleFalsePositive: true` are likely benign (documentation examples, test files). You can either exclude them from the displayed score or show them with a "likely false positive" label.
 
-**Q: Can I disable specific rules?**
-A: Yes: `agent-shield scan ./path --json --disable supply-chain,phone-home`
+**Q: Can I disable rules that don't apply?**
+A: Yes. Use `--disable rule1,rule2`. Common: `--disable supply-chain` if you don't want npm CVE checks.
 
-**Q: What about .difypkg files (Dify plugins)?**
-A: Supported. AgentShield auto-extracts and scans them: `agent-shield scan ./plugin.difypkg --json`
+**Q: Dify plugins (.difypkg)?**
+A: Supported. AgentShield auto-extracts and scans them.
 
 ---
 
-**AgentShield** — Open source, MIT licensed
-GitHub: https://github.com/elliotllliu/agent-shield
-npm: https://www.npmjs.com/package/@elliotllliu/agent-shield
+**AgentShield** — MIT licensed, open source
+- GitHub: https://github.com/elliotllliu/agent-shield
+- npm: https://www.npmjs.com/package/@elliotllliu/agent-shield
