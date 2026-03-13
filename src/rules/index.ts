@@ -24,6 +24,7 @@ import { crossFileRule } from "./cross-file.js";
 import { attackChainRule } from "./attack-chain.js";
 import { multilangInjectionRule } from "./multilang-injection.js";
 import { descriptionIntegrityRule } from "./description-integrity.js";
+import { pythonAstRule } from "./python-ast.js";
 
 /** All registered rules */
 export const rules: Rule[] = [
@@ -62,6 +63,8 @@ export const rules: Rule[] = [
   multilangInjectionRule,
   // Description vs code integrity check
   descriptionIntegrityRule,
+  // Python AST deep analysis
+  pythonAstRule,
 ];
 
 /** Get a rule by ID */

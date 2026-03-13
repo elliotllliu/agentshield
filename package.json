@@ -58,6 +58,7 @@
   },
   "files": [
     "dist",
+    "src/analyzers",
     "README.md",
     "LICENSE"
   ],
