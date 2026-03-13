@@ -1,6 +1,6 @@
 {
   "name": "@elliotllliu/agentshield",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Security scanner for AI agent skills, MCP servers, and plugins",
   "type": "module",
   "bin": {
