@@ -52,7 +52,7 @@ npx @elliotllliu/agentshield discover
 | `obfuscation` | `eval(atob(...))`, hex strings, `String.fromCharCode` obfuscation |
 | `typosquatting` | Suspicious npm names: `1odash` → `lodash`, `axois` → `axios` |
 | `hidden-files` | `.env` files with `PASSWORD`, `SECRET`, `API_KEY` committed to repo |
-| `prompt-injection` | Hidden instructions, identity manipulation, behavioral hijacking |
+| `prompt-injection` | Hidden instructions, identity manipulation, behavioral hijacking, TPA, multi-lang |
 | `tool-shadowing` | Cross-server tool name conflicts, tool override attacks |
 
 ### 🟡 Warning (review recommended)
@@ -66,6 +66,21 @@ npx @elliotllliu/agentshield discover
 | `excessive-perms` | Too many or dangerous permissions in SKILL.md |
 | `phone-home` | `setInterval` + HTTP requests (beacon/C2 heartbeat pattern) |
 | `mcp-manifest` | MCP server: wildcard perms, undeclared capabilities, suspicious tool descriptions |
+
+### 🎯 Prompt Injection Detection — 55+ Patterns
+
+Based on research from [Invariant Labs TPA](https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks), [BIPIA (KDD 2025)](https://arxiv.org/abs/2312.14197), and [Snyk Agent Scan](https://github.com/snyk/agent-scan):
+
+| Category | Examples |
+|----------|----------|
+| **Instruction Override** | "ignore previous instructions", multi-language (中/西/法/德) |
+| **Identity Manipulation** | "you are now a...", DAN mode, developer mode jailbreaks |
+| **System Prompt Extraction** | `<system>` tags, ChatML `<\|im_start\|>`, `[INST]` delimiters |
+| **Hidden Instructions** | `<IMPORTANT>` TPA tags, HTML comments, zero-width chars, CSS hiding |
+| **Concealment** | "don't tell the user", "be gentle and not scary" |
+| **Tool Poisoning (TPA)** | "read ~/.ssh/id_rsa and pass as sidenote", Python docstring attacks |
+| **Data Exfiltration** | Markdown image exfil, webhook.site, ngrok tunnels, dotfile access |
+| **Encoding Evasion** | Base64-encoded keywords, hex chains, unicode escapes |
 
 ## Real-World Scan Data
 
