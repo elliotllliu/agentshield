@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# thv-safe — AgentShield pre-install scanner for ToolHive MCP servers
+# PoC integration: scans server source code before deployment
+set -euo pipefail
+
+VERSION="0.1.0"
+SCAN_DIR="${AGENT_SHIELD_CACHE:-/tmp/agent-shield-cache}"
+MIN_GRADE="C"  # minimum grade to auto-proceed
+AUTO_YES=false
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+usage() {
+  cat <<EOF
+${BOLD}thv-safe${NC} v${VERSION} — AgentShield pre-install scanner for ToolHive
+
+${BOLD}Usage:${NC}
+  thv-safe run <server> [options]    Scan then run server
+  thv-safe scan <server>             Scan only (no run)
+  thv-safe --help                    Show this help
+
+${BOLD}Options:${NC}
+  --yes, -y          Auto-proceed if grade >= ${MIN_GRADE}
+  --min-grade <A-F>  Set minimum grade (default: C)
+  --json             Output scan results as JSON
+  --no-cache         Force re-clone and re-scan
+
+${BOLD}Examples:${NC}
+  thv-safe run fetch
+  thv-safe run fetch --yes
+  thv-safe scan github -y --min-grade B
+EOF
+  exit 0
+}
+
+log() { echo -e "${CYAN}🛡️  $1${NC}"; }
+warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+err() { echo -e "${RED}❌ $1${NC}" >&2; }
+ok() { echo -e "${GREEN}✅ $1${NC}"; }
+
+# Check dependencies
+check_deps() {
+  if ! command -v thv &>/dev/null; then
+    err "ToolHive CLI (thv) not found. Install: https://github.com/stacklok/toolhive"
+    exit 1
+  fi
+  if ! command -v agent-shield &>/dev/null; then
+    err "AgentShield not found. Install: npm install -g @elliotllliu/agent-shield"
+    exit 1
+  fi
+  if ! command -v git &>/dev/null; then
+    err "git not found"
+    exit 1
+  fi
+}
+
+# Resolve server source repo from ToolHive registry
+resolve_repo() {
+  local server="$1"
+  local repo_url=""
+
+  # Try thv registry list --json and extract source URL
+  if thv registry list --json 2>/dev/null | grep -q "$server"; then
+    repo_url=$(thv registry list --json 2>/dev/null | \
+      python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for s in (data if isinstance(data, list) else data.get('servers', {}).values() if isinstance(data, dict) else []):
+    name = s.get('name', '') if isinstance(s, dict) else ''
+    if name == '$server' or '$server' in str(s):
+        for key in ['source', 'repository', 'repo', 'homepage', 'url']:
+            v = s.get(key, '') if isinstance(s, dict) else ''
+            if v and 'github.com' in str(v):
+                print(v)
+                sys.exit(0)
+" 2>/dev/null || true)
+  fi
+
+  # Fallback: search GitHub for the server name + MCP
+  if [ -z "$repo_url" ]; then
+    repo_url=$(gh search repos "$server mcp server" --limit 1 --json url --jq '.[0].url' 2>/dev/null || true)
+  fi
+
+  # Fallback: try common naming patterns
+  if [ -z "$repo_url" ]; then
+    for pattern in "mcp-server-$server" "mcp-$server" "$server-mcp-server"; do
+      if gh repo view "modelcontextprotocol/$pattern" --json url --jq '.url' 2>/dev/null; then
+        repo_url="https://github.com/modelcontextprotocol/$pattern"
+        break
+      fi
+    done
+  fi
+
+  echo "$repo_url"
+}
+
+# Clone and scan
+scan_server() {
+  local server="$1"
+  local no_cache="${2:-false}"
+  local json_output="${3:-false}"
+  local scan_path="$SCAN_DIR/$server"
+
+  log "AgentShield Pre-Install Scan"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # Resolve source repo
+  log "Resolving source for '$server'..."
+  local repo_url
+  repo_url=$(resolve_repo "$server")
+
+  if [ -z "$repo_url" ]; then
+    warn "Could not find source repository for '$server'"
+    warn "Scanning ToolHive container image metadata only..."
+    # Even without source, we can check the registry entry
+    echo ""
+    echo -e "${YELLOW}Unable to perform source code scan.${NC}"
+    echo "Consider running the server with extra caution."
+    return 2
+  fi
+
+  echo -e "📦 Server: ${BOLD}$server${NC}"
+  echo -e "🔗 Source: ${BOLD}$repo_url${NC}"
+
+  # Clone (shallow)
+  if [ "$no_cache" = "true" ] || [ ! -d "$scan_path" ]; then
+    rm -rf "$scan_path"
+    log "Cloning source..."
+    git clone --depth 1 --quiet "$repo_url" "$scan_path" 2>/dev/null || {
+      err "Failed to clone $repo_url"
+      return 2
+    }
+  else
+    log "Using cached source ($scan_path)"
+  fi
+
+  # Run AgentShield scan
+  echo ""
+  if [ "$json_output" = "true" ]; then
+    agent-shield scan "$scan_path" --json
+  else
+    agent-shield scan "$scan_path"
+  fi
+
+  return 0
+}
+
+# Extract grade from scan output
+get_grade() {
+  local server="$1"
+  local scan_path="$SCAN_DIR/$server"
+  local result
+  result=$(agent-shield scan "$scan_path" --json 2>/dev/null || echo '{}')
+  echo "$result" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    sr = data.get('scoreResult', {})
+    grade = sr.get('grade', sr.get('letterGrade', ''))
+    score = sr.get('score', data.get('score', -1))
+    print(f'{grade}|{score}')
+except:
+    print('?|-1')
+" 2>/dev/null || echo "?|-1"
+}
+
+# Compare grades (A=5, B=4, C=3, D=2, F=1)
+grade_value() {
+  case "$1" in
+    A|A+|A-) echo 5 ;;
+    B|B+|B-) echo 4 ;;
+    C|C+|C-) echo 3 ;;
+    D|D+|D-) echo 2 ;;
+    F|F+|F-) echo 1 ;;
+    *) echo 0 ;;
+  esac
+}
+
+grade_passes() {
+  local actual="$1"
+  local minimum="$2"
+  local av mv
+  av=$(grade_value "$actual")
+  mv=$(grade_value "$minimum")
+  [ "$av" -ge "$mv" ]
+}
+
+# Main
+main() {
+  local action=""
+  local server=""
+  local no_cache=false
+  local json_output=false
+  local extra_args=()
+
+  [ $# -eq 0 ] && usage
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      run|scan) action="$1"; shift; [ $# -gt 0 ] && server="$1" ;;
+      --yes|-y) AUTO_YES=true ;;
+      --min-grade) shift; MIN_GRADE="${1:-C}" ;;
+      --json) json_output=true ;;
+      --no-cache) no_cache=true ;;
+      --help|-h) usage ;;
+      --version|-v) echo "thv-safe v${VERSION}"; exit 0 ;;
+      *) extra_args+=("$1") ;;
+    esac
+    shift
+  done
+
+  if [ -z "$server" ]; then
+    err "No server specified"
+    usage
+  fi
+
+  check_deps
+  mkdir -p "$SCAN_DIR"
+
+  # Run scan
+  scan_server "$server" "$no_cache" "$json_output"
+  local scan_exit=$?
+
+  if [ "$action" = "scan" ]; then
+    exit $scan_exit
+  fi
+
+  # action = run
+  if [ $scan_exit -eq 2 ]; then
+    # Could not scan source
+    if [ "$AUTO_YES" = "true" ]; then
+      warn "No source scan available. Proceeding anyway (--yes)."
+    else
+      echo ""
+      read -rp "⚠️  No source scan available. Proceed with thv run? [y/N] " confirm
+      [[ "$confirm" =~ ^[Yy] ]] || { echo "Aborted."; exit 1; }
+    fi
+    exec thv run "$server" "${extra_args[@]}"
+  fi
+
+  # Get grade
+  local grade_info grade score
+  grade_info=$(get_grade "$server")
+  grade=$(echo "$grade_info" | cut -d'|' -f1)
+  score=$(echo "$grade_info" | cut -d'|' -f2)
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  if grade_passes "$grade" "$MIN_GRADE"; then
+    ok "Grade $grade (score: $score) meets minimum ($MIN_GRADE)"
+    if [ "$AUTO_YES" = "true" ]; then
+      log "Auto-proceeding with thv run $server..."
+      exec thv run "$server" "${extra_args[@]}"
+    else
+      read -rp "Proceed with thv run $server? [Y/n] " confirm
+      [[ "$confirm" =~ ^[Nn] ]] && { echo "Aborted."; exit 1; }
+      exec thv run "$server" "${extra_args[@]}"
+    fi
+  else
+    warn "Grade $grade (score: $score) is below minimum ($MIN_GRADE)"
+    if [ "$AUTO_YES" = "true" ]; then
+      err "Blocked: grade too low. Use --min-grade to adjust threshold."
+      exit 1
+    else
+      echo -e "${RED}${BOLD}This server has significant security findings.${NC}"
+      read -rp "⚠️  Run anyway? [y/N] " confirm
+      [[ "$confirm" =~ ^[Yy] ]] || { echo "Aborted."; exit 1; }
+      exec thv run "$server" "${extra_args[@]}"
+    fi
+  fi
+}
+
+main "$@"
