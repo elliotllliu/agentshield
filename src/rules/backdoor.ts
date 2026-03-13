@@ -20,8 +20,8 @@ const BACKDOOR_PATTERNS: Array<{
   { pattern: /require\s*\(\s*[^"'`]/, desc: "dynamic require()", severity: "medium" },
   { pattern: /import\s*\(\s*[^"'`]/, desc: "dynamic import()", severity: "medium" },
 
-  // Python
-  { pattern: /\bexec\s*\(\s*[^"']/, desc: "Python exec() with dynamic input", severity: "high" },
+  // Python — only match standalone exec(), not object.method.exec()
+  { pattern: /(?<!\.\w*)(?<!\.)exec\s*\(\s*[^"')]\s*(?!\s*=)/, desc: "Python exec() with dynamic input", severity: "high" },
   { pattern: /\bos\.system\s*\(/, desc: "os.system() — use subprocess.run instead", severity: "high" },
   { pattern: /subprocess\.call\s*\(\s*[^[\]].*shell\s*=\s*True/, desc: "subprocess with shell=True", severity: "high" },
   { pattern: /\b__import__\s*\(/, desc: "dynamic __import__()", severity: "medium" },

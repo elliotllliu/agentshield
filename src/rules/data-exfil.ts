@@ -6,7 +6,11 @@ import type { Rule, Finding, ScannedFile } from "../types.js";
  */
 
 const SENSITIVE_READ_RE =
-  /readFile|readFileSync|fs\.read|open\(|\.ssh|\.env|credentials|\.aws|\.kube|\.npmrc|\.gitconfig|\.openclaw/i;
+  /readFile|readFileSync|fs\.read|\.ssh|\.env\b|\.aws|\.kube|\.npmrc|\.gitconfig|\.openclaw/i;
+
+/** Credential access patterns that are NORMAL in plugin/SDK context */
+const SAFE_CREDENTIAL_RE =
+  /self\.runtime\.credentials|this\.credentials|self\.config|tool_parameters|plugin_config|runtime\.credentials|provider_credentials/i;
 
 const HTTP_SEND_RE =
   /fetch\s*\(|axios\.|http\.request|https\.request|XMLHttpRequest|\.post\s*\(|\.put\s*\(|urllib|requests\.(post|put|patch)|curl\s/i;
@@ -31,13 +35,17 @@ export const dataExfilRule: Rule = {
 
       // Critical: same file reads sensitive data AND sends it out
       if (hasSensitiveRead && hasHttpSend) {
+        // Check if "sensitive reads" are actually safe credential access (plugin SDK patterns)
+        const hasSafeCredentials = SAFE_CREDENTIAL_RE.test(content);
+        
         // Find the specific lines
         const readLines: number[] = [];
         const sendLines: number[] = [];
 
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
-          if (SENSITIVE_READ_RE.test(line)) readLines.push(i + 1);
+          // Skip lines that are safe credential access
+          if (SENSITIVE_READ_RE.test(line) && !SAFE_CREDENTIAL_RE.test(line)) readLines.push(i + 1);
           if (HTTP_SEND_RE.test(line)) sendLines.push(i + 1);
         }
 
@@ -50,6 +58,9 @@ export const dataExfilRule: Rule = {
             message: `Reads sensitive data (line ${readLines.join(",")}) and sends HTTP request (line ${sendLines.join(",")}) — possible exfiltration`,
             evidence: file.lines[sendLines[0]! - 1]?.trim().slice(0, 120),
           });
+        } else if (hasSafeCredentials && sendLines.length > 0) {
+          // Credential access + HTTP is normal for API plugins — skip entirely
+          // (don't even report as medium — this is expected behavior)
         }
       }
 
