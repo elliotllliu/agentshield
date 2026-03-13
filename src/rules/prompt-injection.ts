@@ -8,8 +8,11 @@ import type { Rule, Finding, ScannedFile } from "../types.js";
  * Based on research from:
  * - Invariant Labs: Tool Poisoning Attacks (TPA) on MCP servers
  * - BIPIA benchmark (KDD 2025): Indirect prompt injection taxonomy
- * - arXiv:2403.04957: Universal Prompt Injection Attacks
- * - Snyk Agent Scan: E001-E006 issue codes
+ * - arXiv:2403.04957: Automatic and Universal Prompt Injection (Liu et al.)
+ * - arXiv:2302.12173: Indirect Prompt Injection (Greshake et al.)
+ * - arXiv:2310.12815: Formalizing Prompt Injection (USENIX Security 2024)
+ * - Open-Prompt-Injection: NaiveAttacker, EscapeCharAttacker, FakeCompAttacker, CombineAttacker
+ * - Snyk Agent Scan: E001-E006, W001, W011 issue codes
  */
 
 // ============================================================
@@ -139,6 +142,50 @@ const ENCODING_EVASION: Array<{ pattern: RegExp; description: string; severity: 
   { pattern: /\\u[0-9a-f]{4}(?:\\u[0-9a-f]{4}){5,}/gi, description: "Unicode escape sequence chain (potential hidden text)", severity: "warning" },
 ];
 
+// ============================================================
+// Category 9: Fake Completion Attack (Open-Prompt-Injection: FakeCompAttacker)
+// Agent thinks original task is done, then follows injected instructions
+// ============================================================
+const FAKE_COMPLETION: Array<{ pattern: RegExp; description: string; severity: "critical" | "warning" }> = [
+  { pattern: /(?:Answer|Response|Result|Output|Summary|Task)\s*:\s*(?:done|complete|finished|negative sentiment|no spam|no hateful|entailment|equivalent)[\s.]*(?:\n|\r|$)/i, description: "Fake task completion followed by potential injection", severity: "warning" },
+  { pattern: /(?:task\s+(?:is\s+)?(?:complete|done|finished)|I'?(?:ve|m)\s+(?:done|finished)|(?:analysis|correction|summary|grammar)\s+(?:is\s+)?complete)[.\s]*(?:now|next|additionally|also|furthermore|by the way)/i, description: "Fake completion + follow-up injection", severity: "critical" },
+  { pattern: /---\s*\n\s*(?:ignore|new|now|actual|real)\s+(?:instructions?|task)/i, description: "Separator + new instruction injection after fake completion", severity: "critical" },
+];
+
+// ============================================================
+// Category 10: Delimiter/Boundary Confusion (arXiv:2302.12173)
+// Trick the model by injecting conversation boundary markers
+// ============================================================
+const DELIMITER_CONFUSION: Array<{ pattern: RegExp; description: string; severity: "critical" | "warning" }> = [
+  { pattern: /```\s*(?:system|instruction|prompt|admin|internal)\s*$/i, description: "Fake code block boundary with privileged label", severity: "critical" },
+  { pattern: /\[(?:SYSTEM|ADMIN|INTERNAL|ROOT|OPERATOR|DEVELOPER)\s*(?:MESSAGE|NOTE|INSTRUCTION|OVERRIDE)\]/i, description: "Fake privileged message bracket", severity: "critical" },
+  { pattern: /={3,}\s*(?:SYSTEM|ADMIN|INSTRUCTION|PRIVILEGED)\s*={3,}/i, description: "Fake section boundary marker", severity: "critical" },
+  { pattern: /<\|(?:tool_call|function_call|tool_result|function_result)\|>/i, description: "Fake tool call/result delimiter injection", severity: "critical" },
+  { pattern: /(?:Human|User|Assistant)\s*\((?:internal|admin|system|override)\)\s*:/i, description: "Fake role with elevated context", severity: "critical" },
+];
+
+// ============================================================
+// Category 11: Instruction Hierarchy Abuse
+// Claims elevated privileges or administrative authority
+// ============================================================
+const HIERARCHY_ABUSE: Array<{ pattern: RegExp; description: string; severity: "critical" | "warning" }> = [
+  { pattern: /(?:as\s+(?:the|an?)\s+)?(?:administrator|admin|supervisor|manager|owner|operator)\s*[,:]\s*(?:I\s+)?(?:instruct|command|order|direct|authorize|override|grant)/i, description: "Claims administrator authority", severity: "critical" },
+  { pattern: /(?:this\s+(?:instruction|message|command)\s+)?(?:has|with)\s+(?:higher|elevated|admin|root|system)\s+(?:priority|privilege|access|permission|authority)/i, description: "Claims elevated priority/privilege", severity: "critical" },
+  { pattern: /(?:per|by)\s+(?:company|corporate|management|executive|leadership)\s+(?:policy|directive|order|mandate)/i, description: "Invokes fake corporate authority", severity: "warning" },
+  { pattern: /(?:security|compliance|legal|audit)\s+(?:team|department|officer)\s+(?:requires|mandates|demands|directs)/i, description: "Invokes fake security/compliance authority", severity: "warning" },
+  { pattern: /(?:authorized|approved|sanctioned|cleared)\s+by\s+(?:the\s+)?(?:system|admin|security|management|CEO|CTO)/i, description: "Claims authorization from authority figure", severity: "warning" },
+];
+
+// ============================================================
+// Category 12: Multi-step / Payload Splitting
+// Splits malicious intent across multiple innocuous-looking lines
+// ============================================================
+const PAYLOAD_SPLITTING: Array<{ pattern: RegExp; description: string; severity: "critical" | "warning" }> = [
+  { pattern: /step\s*\d+\s*:\s*(?:read|access|get|retrieve)\s+(?:the\s+)?(?:file|data|credentials?|keys?|tokens?|secrets?)/i, description: "Multi-step attack: numbered steps targeting sensitive data", severity: "critical" },
+  { pattern: /step\s*\d+\s*:\s*(?:send|post|transmit|forward|upload)\s+(?:the\s+)?(?:results?|output|data|contents?)\s+(?:to|via)/i, description: "Multi-step attack: numbered exfiltration step", severity: "critical" },
+  { pattern: /(?:first|then|next|after that|finally),?\s+(?:silently|quietly|without\s+(?:telling|the\s+user))\s+/i, description: "Sequential instruction with concealment", severity: "critical" },
+];
+
 // Merge all categories
 const INJECTION_PATTERNS = [
   ...INSTRUCTION_OVERRIDE,
@@ -149,6 +196,10 @@ const INJECTION_PATTERNS = [
   ...TOOL_POISONING,
   ...DATA_EXFILTRATION,
   ...ENCODING_EVASION,
+  ...FAKE_COMPLETION,
+  ...DELIMITER_CONFUSION,
+  ...HIERARCHY_ABUSE,
+  ...PAYLOAD_SPLITTING,
 ];
 
 // Suspicious URL patterns in skills
