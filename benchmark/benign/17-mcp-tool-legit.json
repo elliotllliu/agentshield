@@ -1,0 +1,39 @@
+{
+  "name": "file-search-tool",
+  "version": "1.0.0",
+  "description": "Search for files by name or content within the project directory",
+  "tools": [
+    {
+      "name": "search_files",
+      "description": "Search for files matching a glob pattern within the project root",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Glob pattern like *.ts or src/**/*.py"
+          },
+          "content": {
+            "type": "string",
+            "description": "Optional text to search within files"
+          }
+        },
+        "required": ["pattern"]
+      }
+    },
+    {
+      "name": "read_file",
+      "description": "Read the contents of a file within the project directory",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the file"
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  ]
+}
