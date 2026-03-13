@@ -22,6 +22,7 @@ import { toxicFlow } from "./toxic-flow.js";
 import { pythonSecurityRule } from "./python-security.js";
 import { crossFileRule } from "./cross-file.js";
 import { attackChainRule } from "./attack-chain.js";
+import { multilangInjectionRule } from "./multilang-injection.js";
 
 /** All registered rules */
 export const rules: Rule[] = [
@@ -56,6 +57,8 @@ export const rules: Rule[] = [
   crossFileRule,
   // Multi-step attack chain detection
   attackChainRule,
+  // Multi-language injection + advanced poisoning
+  multilangInjectionRule,
 ];
 
 /** Get a rule by ID */
