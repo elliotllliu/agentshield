@@ -18,6 +18,7 @@ import { mcpManifestRule } from "./mcp-manifest.js";
 import { promptInjection } from "./prompt-injection.js";
 import { toolShadowing } from "./tool-shadowing.js";
 import { skillRisks } from "./skill-risks.js";
+import { toxicFlow } from "./toxic-flow.js";
 
 /** All registered rules */
 export const rules: Rule[] = [
@@ -44,6 +45,8 @@ export const rules: Rule[] = [
   toolShadowing,
   // Skill risk assessment
   skillRisks,
+  // Toxic flow analysis
+  toxicFlow,
 ];
 
 /** Get a rule by ID */
