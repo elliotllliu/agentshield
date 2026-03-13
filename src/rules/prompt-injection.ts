@@ -70,6 +70,10 @@ const SYSTEM_PROMPT_ATTACKS: Array<{ pattern: RegExp; description: string; sever
   { pattern: /<\|(?:im_start|im_end|system|user|assistant|endoftext)\|>/i, description: "ChatML/token delimiter injection", severity: "medium" },
   { pattern: /###\s*(?:System|Human|Assistant|User)\s*(?:Message|Prompt)?\s*:/i, description: "Fake conversation role delimiter", severity: "medium" },
   { pattern: /\bEND_SYSTEM_PROMPT\b|\bBEGIN_USER_INPUT\b|\bSYSTEM_OVERRIDE\b/i, description: "Fake system boundary markers", severity: "medium" },
+  // Indirect injection: fake system updates/notes embedded in content
+  { pattern: /IMPORTANT\s+SYSTEM\s+(?:UPDATE|NOTE|MESSAGE|NOTICE)/i, description: "Indirect injection: fake system update in content", severity: "medium" },
+  { pattern: /(?:CRITICAL|URGENT)\s+(?:SECURITY\s+)?(?:UPDATE|NOTICE|ALERT)\s*:/i, description: "Indirect injection: fake urgent security notice", severity: "medium" },
+  { pattern: /\[REDIRECT\s*:.*@/i, description: "Indirect injection: redirect instruction", severity: "medium" },
 ];
 
 // ============================================================

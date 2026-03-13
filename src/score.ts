@@ -299,8 +299,10 @@ export function computeScoreV2(findings: Finding[], meta?: ProjectMeta): ScoreRe
     dimensions.promptInjection.score * DIMENSION_WEIGHTS.promptInjection! +
     dimensions.codeQuality.score * DIMENSION_WEIGHTS.codeQuality!;
 
-  // Bonus
-  const { bonus, reasons } = computeBonus(meta);
+  // Bonus — only applies when there are no high/medium findings
+  const { bonus: rawBonus, reasons } = computeBonus(meta);
+  const hasSecurityFindings = findings.some(f => f.severity === "high" || f.severity === "medium");
+  const bonus = hasSecurityFindings ? 0 : rawBonus;
 
   // Overall: weighted + bonus, clamped to [-100, 100]
   const overall = Math.max(-100, Math.min(100, Math.round((weightedScore + bonus) * 10) / 10));

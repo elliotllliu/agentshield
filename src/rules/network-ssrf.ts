@@ -20,6 +20,9 @@ const SSRF_PATTERNS: Array<{ pattern: RegExp; desc: string; severity: "medium" |
   { pattern: /169\.254\.169\.254/, desc: "AWS metadata endpoint access — potential SSRF", severity: "medium" },
 ];
 
+// Known safe API domains — template literal URLs to these are normal
+const SAFE_API_DOMAINS = /(?:feishu\.cn|lark\.com|github\.com|googleapis\.com|openai\.com|anthropic\.com|api\.slack\.com|graph\.microsoft\.com|api\.twitter\.com|api\.telegram\.org|discord\.com|api\.stripe\.com|api\.twilio\.com|api\.sendgrid\.com)\//i;
+
 export const networkSsrfRule: Rule = {
   id: "network-ssrf",
   name: "Server-Side Request Forgery",
@@ -38,6 +41,9 @@ export const networkSsrfRule: Rule = {
 
         for (const { pattern, desc, severity } of SSRF_PATTERNS) {
           if (pattern.test(line)) {
+            // Skip template literal URLs to known safe API domains
+            if (desc.includes("template literal") && SAFE_API_DOMAINS.test(line)) continue;
+
             findings.push({
               rule: "network-ssrf",
               severity,

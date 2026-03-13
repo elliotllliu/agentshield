@@ -13,7 +13,10 @@ const OBFUSCATION_PATTERNS: Array<{
   { pattern: /atob\s*\(.*\beval\b|eval\s*\(.*\batob\b/, desc: "atob() + eval() combo", severity: "high" },
   { pattern: /Buffer\.from\s*\([^)]*,\s*["']base64["']\).*\beval\b/, desc: "Base64 decode + eval()", severity: "high" },
   { pattern: /Buffer\.from\s*\([^)]*,\s*["']base64["']\).*\bexec\b/, desc: "Base64 decode + exec()", severity: "high" },
-  { pattern: /\bString\.fromCharCode\s*\(/, desc: "String.fromCharCode() — potential obfuscation", severity: "medium" },
+  // String.fromCharCode: only flag when chained (>3 calls) or combined with eval/Function
+  // Single calls like String.fromCharCode(65 + n%26) are normal (e.g., Excel column names)
+  { pattern: /\bString\.fromCharCode\s*\((?:[^)]*,\s*){3,}/, desc: "String.fromCharCode() with many args — potential obfuscation", severity: "medium" },
+  { pattern: /(?:eval|Function)\s*\(.*\bString\.fromCharCode|String\.fromCharCode.*(?:eval|Function)\s*\(/, desc: "String.fromCharCode + eval/Function combo", severity: "high" },
   { pattern: /\\x[0-9a-f]{2}\\x[0-9a-f]{2}\\x[0-9a-f]{2}/, desc: "Hex-encoded string sequence", severity: "medium" },
   { pattern: /\\u00[0-9a-f]{2}\\u00[0-9a-f]{2}/, desc: "Unicode-escaped string sequence", severity: "medium" },
 ];

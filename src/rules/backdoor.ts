@@ -32,6 +32,14 @@ const BACKDOOR_PATTERNS: Array<{
   { pattern: /bash\s+-c\s+\$/, desc: "bash -c with variable", severity: "high" },
   { pattern: /(?:curl|wget)\s+[^|]*\|\s*(?:bash|sh|zsh|python|node|perl)/, desc: "pipe-to-shell: downloads and executes remote code", severity: "high" },
   { pattern: /(?:curl|wget)\s+.*-o\s+\S+\s*&&\s*chmod\s+\+x/, desc: "download, chmod +x, execute pattern", severity: "high" },
+
+  // VM sandbox escape
+  { pattern: /\bvm\.run\s*\(/, desc: "vm.run() — Node.js VM sandbox (escapable)", severity: "medium" },
+  { pattern: /\bnew\s+VM\s*\(/, desc: "vm2 VM constructor — known sandbox escapes (CVE-2023-29017)", severity: "medium" },
+
+  // Container/proc escape
+  { pattern: /\/proc\/self\/fd/, desc: "/proc/self/fd access — potential container escape (CVE-2024-21626)", severity: "high" },
+  { pattern: /\/proc\/\d+\/(?:root|cwd|exe|environ)/, desc: "/proc filesystem access — potential container escape", severity: "high" },
 ];
 
 export const backdoorRule: Rule = {

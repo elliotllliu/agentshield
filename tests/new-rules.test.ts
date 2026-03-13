@@ -19,10 +19,16 @@ function makeFile(relativePath: string, content: string): ScannedFile {
 
 // obfuscation
 describe("obfuscation", () => {
-  it("detects String.fromCharCode", () => {
-    const f = makeFile("evil.js", `const s = String.fromCharCode(72,101,108);`);
+  it("detects String.fromCharCode with many args", () => {
+    const f = makeFile("evil.js", `const s = String.fromCharCode(72,101,108,108,111);`);
     const findings = obfuscationRule.run([f]);
     assert.ok(findings.length > 0);
+  });
+
+  it("does NOT flag simple fromCharCode", () => {
+    const f = makeFile("safe.js", `const col = String.fromCharCode(65 + n % 26);`);
+    const findings = obfuscationRule.run([f]);
+    assert.equal(findings.length, 0);
   });
 
   it("does NOT flag normal code", () => {

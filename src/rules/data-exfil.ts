@@ -69,9 +69,11 @@ export const dataExfilRule: Rule = {
       }
 
       // Warning: dynamic URL construction in fetch/request calls
+      // Skip known safe API domains (feishu, github, googleapis, etc.)
+      const SAFE_API = /(?:feishu\.cn|lark\.com|github\.com|googleapis\.com|openai\.com|anthropic\.com|api\.slack\.com|graph\.microsoft\.com|api\.twitter\.com|api\.telegram\.org|discord\.com|api\.stripe\.com)/i;
       for (let i = 0; i < file.lines.length; i++) {
         const line = file.lines[i]!;
-        if (DYNAMIC_URL_RE.test(line)) {
+        if (DYNAMIC_URL_RE.test(line) && !SAFE_API.test(line)) {
           findings.push({
             rule: "data-exfil",
             severity: "medium",
