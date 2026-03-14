@@ -60,12 +60,18 @@ export const backdoorRule: Rule = {
 
         for (const { pattern, desc, severity } of BACKDOOR_PATTERNS) {
           if (pattern.test(line)) {
+            // Downgrade severity for security/diagnostic tools
+            const isRepairTool = /(?:security[-_]?check|doctor|repair|health[-_]?check|diagnostic|fix[-_]?config|setup[-_]?wizard|troubleshoot)/i.test(file.relativePath);
+            const effectiveSeverity = isRepairTool && severity !== "high"
+              ? "low" as const
+              : isRepairTool ? "medium" as const : severity;
+
             findings.push({
               rule: "backdoor",
-              severity,
+              severity: effectiveSeverity,
               file: file.relativePath,
               line: i + 1,
-              message: desc,
+              message: isRepairTool ? `${desc} (repair tool context)` : desc,
               evidence: line.trim().slice(0, 120),
               confidence: "high",
             });

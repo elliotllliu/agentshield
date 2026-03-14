@@ -127,6 +127,12 @@ function calcDeductions(findings: Finding[]): {
   const byRule: Record<string, { amount: number; count: number }> = {};
   let total = 0;
 
+  // Deduplicate overlapping findings on the same file+line:
+  // When multiple rules flag the exact same location, apply a discount
+  // to prevent triple-counting (e.g., data-exfil + env-leak + sensitive-read
+  // all flagging process.env.X + fetch() on the same line)
+  const locationCounts: Record<string, number> = {};
+
   for (const f of findings) {
     if (f.possibleFalsePositive) continue;
 
@@ -136,7 +142,19 @@ function calcDeductions(findings: Finding[]): {
     const count = ruleCounts[f.rule] ?? 0;
     ruleCounts[f.rule] = count + 1;
 
-    const penalty = base * weight * confidenceMultiplier * Math.pow(DECAY_FACTOR, count);
+    let penalty = base * weight * confidenceMultiplier * Math.pow(DECAY_FACTOR, count);
+
+    // Apply overlap discount: if this file+line was already flagged by another rule,
+    // reduce penalty by 70% for each additional rule on the same location
+    if (f.file && f.line) {
+      const locKey = `${f.file}:${f.line}`;
+      const locCount = locationCounts[locKey] ?? 0;
+      locationCounts[locKey] = locCount + 1;
+      if (locCount > 0) {
+        penalty *= 0.3; // 70% discount for overlapping findings
+      }
+    }
+
     total += penalty;
 
     if (!byRule[f.rule]) {
