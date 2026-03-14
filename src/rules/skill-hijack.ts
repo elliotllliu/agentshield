@@ -118,6 +118,14 @@ const SAFE_INSTALL_DOMAINS = new Set([
   "dl.google.com",
   "download.docker.com",
   "deb.nodesource.com",
+  // Well-known API endpoints (not install sources)
+  "api.anthropic.com", "api.openai.com", "api.github.com",
+  "api.stripe.com", "api.twilio.com", "api.sendgrid.com",
+  "api.cloudflare.com", "api.vercel.com", "api.netlify.com",
+  "api.aws.amazon.com", "s3.amazonaws.com",
+  "storage.googleapis.com", "googleapis.com",
+  "api.azure.com", "blob.core.windows.net",
+  "services.ai.azure.com", "openai.azure.com", "cognitiveservices.azure.com",
 ]);
 
 /** Known safe install commands — standard package managers */
