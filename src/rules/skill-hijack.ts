@@ -85,7 +85,26 @@ const CONFIG_TAMPER: Array<{ pattern: RegExp; description: string; severity: "hi
   { pattern: /openclaw\s+gateway\s+(?:run|restart|start|stop)/i, description: "Controls OpenClaw gateway service", severity: "medium" },
 ];
 
-// ─── Category 5: Remote code execution via install scripts ───
+// ─── Category 5: Silent OTA / Self-replacing code ───
+// Detects tools that auto-update from unknown sources without user consent
+
+// Patterns that indicate self-replacing behavior
+const SELF_REPLACE_PATTERNS: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" }> = [
+  // Python: os.execve to re-execute self after update
+  { pattern: /os\.execve\s*\(\s*sys\.executable/, description: "Self-replacing execution: downloads update then re-executes itself via os.execve", severity: "high" },
+  // Generic self-replacement
+  { pattern: /shutil\.(?:copyfile|move)\s*\(.*__file__/, description: "Overwrites own source file (self-update pattern)", severity: "medium" },
+  // Node: process replacement
+  { pattern: /child_process.*spawn.*process\.argv|exec.*process\.execPath/, description: "Re-spawns own process after modification", severity: "medium" },
+];
+
+// Patterns for hardcoded private download sources (not package registries)
+const PRIVATE_SOURCE_RE = /https?:\/\/(?!(?:github\.com|raw\.githubusercontent\.com|registry\.npmjs\.org|npmjs\.com|pypi\.org|files\.pythonhosted\.org|crates\.io|proxy\.golang\.org|rubygems\.org|brew\.sh|dl\.google\.com|download\.docker\.com|apt\.llvm\.org|deb\.nodesource\.com|objects\.githubusercontent\.com)\b)[^\s"'`]+/i;
+
+// Hardcoded download URL template patterns (suspicious when pointing to private CDN)
+const DOWNLOAD_TEMPLATE_RE = /(?:download_url|DOWNLOAD.*URL|update_url|UPDATE.*URL|manifest_url|self_update).*(?:=|:)\s*["'`]?(https?:\/\/[^\s"'`]+)/i;
+
+// ─── Category 6: Remote code execution via install scripts ───
 // Detects curl|bash and similar patterns, with domain reputation awareness
 
 /** Known safe sources — downloads from these are standard practice */
@@ -246,7 +265,61 @@ export const skillHijackRule: Rule = {
         }
       }
 
-      // Category 5: Remote code execution — domain-reputation-aware
+      // Category 5: Silent OTA / Self-replacing code + private download sources
+      if (isCode) {
+        // 5a: Self-replacing patterns
+        for (let i = 0; i < file.lines.length; i++) {
+          const line = file.lines[i]!;
+          for (const { pattern, description, severity } of SELF_REPLACE_PATTERNS) {
+            if (pattern.test(line)) {
+              // Check if the update source is from a trusted domain
+              // Look at surrounding lines (±10) for download URLs
+              const context = file.lines.slice(Math.max(0, i - 10), Math.min(file.lines.length, i + 10)).join("\n");
+              const urlsInContext = context.match(/https?:\/\/[^\s"'`]+/g) || [];
+              const allTrusted = urlsInContext.length > 0 && urlsInContext.every(url => {
+                const d = extractDomain(url);
+                return d ? isSafeDomain(d) : false;
+              });
+
+              findings.push({
+                rule: "skill-hijack",
+                severity: allTrusted ? "low" : severity,
+                file: file.relativePath,
+                line: i + 1,
+                message: allTrusted
+                  ? `Self-update: ${description} (from trusted source)`
+                  : `Silent OTA: ${description}`,
+                evidence: line.trim().slice(0, 120),
+                confidence: allTrusted ? "low" : "high",
+              });
+              break;
+            }
+          }
+        }
+
+        // 5b: Hardcoded private download source URLs
+        for (let i = 0; i < file.lines.length; i++) {
+          const line = file.lines[i]!;
+          const templateMatch = DOWNLOAD_TEMPLATE_RE.exec(line);
+          if (templateMatch) {
+            const url = templateMatch[1]!;
+            const domain = extractDomain(url);
+            if (domain && !isSafeDomain(domain)) {
+              findings.push({
+                rule: "skill-hijack",
+                severity: "medium",
+                file: file.relativePath,
+                line: i + 1,
+                message: `Private download source: hardcoded download URL points to non-standard domain (${domain})`,
+                evidence: line.trim().slice(0, 120),
+                confidence: "high",
+              });
+            }
+          }
+        }
+      }
+
+      // Category 6: Remote code execution — domain-reputation-aware
       if (isShellScript || isMarkdown) {
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
