@@ -1,6 +1,8 @@
 import { loadConfig } from "../config.js";
 import { dirname } from "path";
 import type { Rule, Finding, ScannedFile } from "../types.js";
+import { analyzeAuthFlow } from "../analyzers/auth-flow.js";
+import { analyzeDataFlow } from "../analyzers/data-flow.js";
 
 /**
  * Rule: data-exfil
@@ -56,6 +58,19 @@ export const dataExfilRule: Rule = {
       // SDK-aware confidence: if file uses known SDKs, lower confidence for network findings
       const sdkConf = file.usesKnownSdk ? "low" as const : "high" as const;
 
+      // Auth flow detection: if file contains legitimate auth patterns, lower confidence
+      const authResult = analyzeAuthFlow(file);
+      const effectiveConf = authResult.hasAuthFlow
+        ? "low" as const
+        : sdkConf;
+
+      // Data flow analysis: track variable flows from sources to sinks
+      const dataFlow = analyzeDataFlow(file);
+      // If all data flows go to safe APIs, lower confidence further
+      const flowConf = dataFlow.sinkIsSafe && dataFlow.connections.length > 0
+        ? "low" as const
+        : effectiveConf;
+
       const content = file.content;
       const hasSensitiveRead = SENSITIVE_READ_RE.test(content);
       const hasHttpSend = HTTP_SEND_RE.test(content);
@@ -88,7 +103,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads sensitive data (line ${readLines.join(",")}) and sends HTTP request to known safe API (line ${sendLines.join(",")}) — possible exfiltration, but to safe domain. Review required.`,
               evidence: httpSendLine.trim().slice(0, 120),
-              confidence: sdkConf,
+              confidence: flowConf,
             });
           } else {
             findings.push({
@@ -98,7 +113,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads sensitive data (line ${readLines.join(",")}) and sends HTTP request (line ${sendLines.join(",")}) — possible exfiltration`,
               evidence: httpSendLine?.trim().slice(0, 120),
-              confidence: sdkConf,
+              confidence: flowConf,
             });
           }
         } else if (hasSafeCredentials && sendLines.length > 0) {
@@ -117,7 +132,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads credentials via safe access (line ${readLines.join(",")}) and sends HTTP request to unknown domain (line ${sendLines.join(",")}) — potential exfiltration`,
               evidence: httpSendLine?.trim().slice(0, 120),
-              confidence: sdkConf,
+              confidence: flowConf,
             });
           }
         }
@@ -134,7 +149,7 @@ export const dataExfilRule: Rule = {
             line: i + 1,
             message: "Dynamic URL construction in HTTP request — potential SSRF",
             evidence: line.trim().slice(0, 120),
-            confidence: sdkConf,
+            confidence: flowConf,
           });
         }
       }

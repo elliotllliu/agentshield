@@ -1,4 +1,5 @@
 import type { Rule, Finding, ScannedFile } from "../types.js";
+import { analyzeAuthFlow, isAuthFlowLine } from "../analyzers/auth-flow.js";
 
 /**
  * Rule: credential-hardcode
@@ -37,6 +38,8 @@ export const credentialHardcodeRule: Rule = {
     for (const file of files) {
       if (file.ext === ".md") continue;
 
+      const authResult = analyzeAuthFlow(file);
+
       for (let i = 0; i < file.lines.length; i++) {
         const line = file.lines[i]!;
         const trimmed = line.trimStart();
@@ -44,6 +47,8 @@ export const credentialHardcodeRule: Rule = {
 
         for (const { pattern, desc } of CREDENTIAL_PATTERNS) {
           if (pattern.test(line)) {
+            // If this line is part of an auth flow, lower confidence
+            const conf = (authResult.hasAuthFlow || isAuthFlowLine(line)) ? "low" as const : "medium" as const;
             findings.push({
               rule: "credential-hardcode",
               severity: "high",
@@ -51,7 +56,7 @@ export const credentialHardcodeRule: Rule = {
               line: i + 1,
               message: desc,
               evidence: line.trim().replace(/["'][a-zA-Z0-9_\-/.]{10,}["']/g, '"***"').slice(0, 120),
-              confidence: "medium",
+              confidence: conf,
             });
             break;
           }

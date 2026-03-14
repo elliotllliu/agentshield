@@ -1,4 +1,5 @@
 import type { Rule, Finding, ScannedFile } from "../types.js";
+import { analyzeAuthFlow } from "../analyzers/auth-flow.js";
 
 /**
  * Rule: env-leak
@@ -25,6 +26,9 @@ export const envLeakRule: Rule = {
       if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".md") continue;
 
       const sdkConf = file.usesKnownSdk ? "low" as const : "medium" as const;
+      const authResult = analyzeAuthFlow(file);
+      const effectiveConf = authResult.hasAuthFlow ? "low" as const : sdkConf;
+
       const hasEnvAccess = ENV_ACCESS_RE.test(file.content);
       const hasHttpSend = HTTP_SEND_RE.test(file.content);
 
@@ -59,7 +63,7 @@ export const envLeakRule: Rule = {
             line: sendLines[0],
             message: `Reads environment variables (line ${envLines.join(",")}) and sends HTTP request (line ${sendLines.join(",")}) — possible env leak`,
             evidence: file.lines[sendLines[0]! - 1]?.trim().slice(0, 120),
-            confidence: sdkConf,
+            confidence: effectiveConf,
           });
         }
       }
