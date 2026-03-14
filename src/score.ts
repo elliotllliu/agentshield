@@ -4,7 +4,7 @@ import type { Finding, ScoreResult, DimensionScore, ProjectMeta, Grade } from ".
  * AgentShield Scoring System v2
  *
  * Base score: 100 (per dimension and overall)
- * Score range: -100 to 100
+ * Score range: 0 to 100
  *
  * Key improvements over v1:
  *   1. Per-rule weight multipliers (reverse-shell ≠ eval)
@@ -58,6 +58,13 @@ const SEVERITY_BASE: Record<string, number> = {
   high: 35, // Increased from 15
   medium: 10, // Increased from 6
   low: 3, // Increased from 2
+};
+
+/** Confidence multiplier: high confidence findings have full weight */
+const CONFIDENCE_WEIGHT: Record<string, number> = {
+  high: 1.0,   // confirmed issue — full penalty
+  medium: 0.6, // likely issue — reduced penalty
+  low: 0.3,    // uncertain — minimal penalty
 };
 
 // ─── Dimension mapping: which rules affect which dimension ───
@@ -124,10 +131,11 @@ function calcDeductions(findings: Finding[]): {
 
     const base = SEVERITY_BASE[f.severity] ?? 6;
     const weight = RULE_WEIGHTS[f.rule] ?? 1.0;
+    const confidenceMultiplier = CONFIDENCE_WEIGHT[f.confidence ?? "medium"];
     const count = ruleCounts[f.rule] ?? 0;
     ruleCounts[f.rule] = count + 1;
 
-    const penalty = base * weight * Math.pow(DECAY_FACTOR, count);
+    const penalty = base * weight * confidenceMultiplier * Math.pow(DECAY_FACTOR, count);
     total += penalty;
 
     if (!byRule[f.rule]) {
@@ -157,8 +165,8 @@ function scoreDimension(
     count: d.count,
   }));
 
-  // Dimension score: 100 - deductions, floor -100
-  const score = Math.max(-100, Math.round((100 - total) * 10) / 10);
+  // Dimension score: 100 - deductions, floor 0
+  const score = Math.max(0, Math.round((100 - total) * 10) / 10);
 
   return {
     name: DIMENSION_LABELS[name] ?? name,
@@ -275,7 +283,7 @@ export function gradeEmoji(score: number): string {
  */
 export function computeScore(findings: Finding[]): number {
   const { total } = calcDeductions(findings);
-  return Math.max(-100, Math.round((100 - total) * 10) / 10);
+  return Math.max(0, Math.round((100 - total) * 10) / 10);
 }
 
 /**
@@ -304,8 +312,8 @@ export function computeScoreV2(findings: Finding[], meta?: ProjectMeta): ScoreRe
   const hasSecurityFindings = findings.some(f => f.severity === "high" || f.severity === "medium");
   const bonus = hasSecurityFindings ? 0 : rawBonus;
 
-  // Overall: weighted + bonus, clamped to [-100, 100]
-  const overall = Math.max(-100, Math.min(100, Math.round((weightedScore + bonus) * 10) / 10));
+  // Overall: weighted + bonus, clamped to [0, 100]
+  const overall = Math.max(0, Math.min(100, Math.round((weightedScore + bonus) * 10) / 10));
 
   // Apply score caps based on highest severity finding (to prevent high scores with critical issues)
   const hasHighFindings = findings.some(f => f.severity === "high" && !f.possibleFalsePositive);

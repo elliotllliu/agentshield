@@ -47,6 +47,7 @@ export const sensitiveReadRule: Rule = {
               line: i + 1,
               message: `Accesses ${desc}`,
               evidence: line.trim().slice(0, 120),
+              confidence: "medium",
             });
           }
         }

@@ -60,6 +60,7 @@ export const supplyChainRule: Rule = {
               severity: "low",
               file: "package.json",
               message: `${depCount} dependencies declared — run 'npm install && npm audit' for full CVE check`,
+              confidence: "medium",
             });
           }
         }
@@ -78,6 +79,7 @@ export const supplyChainRule: Rule = {
         severity: "low",
         file: reqTxt.relativePath,
         message: "Python requirements.txt found — run 'pip-audit' for CVE check",
+        confidence: "medium",
       });
     }
 
@@ -108,6 +110,7 @@ function parseNpmAudit(output: string, findings: Finding[]): void {
           file: "package.json",
           message: `${name} — ${severity} severity${cves ? ` (${cves})` : ""}`,
           evidence: typeof vuln.range === "string" ? `affected: ${vuln.range}` : undefined,
+          confidence: "medium",
         });
       }
     }

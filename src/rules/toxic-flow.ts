@@ -152,6 +152,7 @@ export const toxicFlow: Rule = {
           `untrusted input (${hasUntrusted.map(t => t.name).join(", ")}) → ` +
           `private data (${hasPrivate.map(t => t.name).join(", ")}) → ` +
           `public sink (${hasSink.map(t => t.name).join(", ")})`,
+        confidence: "high",
       });
     }
 
@@ -166,6 +167,7 @@ export const toxicFlow: Rule = {
         message: `TF002 Destructive Flow: Untrusted content could trigger destructive actions — ` +
           `untrusted (${hasUntrusted.map(t => t.name).join(", ")}) → ` +
           `destructive (${hasDestructive.map(t => t.name).join(", ")})`,
+        confidence: "high",
       });
     }
 
@@ -177,6 +179,7 @@ export const toxicFlow: Rule = {
           severity: "medium",
           file: "MCP configuration",
           message: `Single tool "${tool.name}" (${tool.server}) combines untrusted content, private data access, and public sink — high exfiltration risk`,
+          confidence: "high",
         });
       }
     }

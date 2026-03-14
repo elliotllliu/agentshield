@@ -36,6 +36,7 @@ export const cryptoMiningRule: Rule = {
               line: i + 1,
               message: desc,
               evidence: line.trim().slice(0, 120),
+              confidence: "high",
             });
             break;
           }

@@ -51,6 +51,7 @@ export const credentialHardcodeRule: Rule = {
               line: i + 1,
               message: desc,
               evidence: line.trim().replace(/["'][a-zA-Z0-9_\-/.]{10,}["']/g, '"***"').slice(0, 120),
+              confidence: "medium",
             });
             break;
           }

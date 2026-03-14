@@ -24,6 +24,7 @@ export const envLeakRule: Rule = {
     for (const file of files) {
       if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".md") continue;
 
+      const sdkConf = file.usesKnownSdk ? "low" as const : "medium" as const;
       const hasEnvAccess = ENV_ACCESS_RE.test(file.content);
       const hasHttpSend = HTTP_SEND_RE.test(file.content);
 
@@ -58,6 +59,7 @@ export const envLeakRule: Rule = {
             line: sendLines[0],
             message: `Reads environment variables (line ${envLines.join(",")}) and sends HTTP request (line ${sendLines.join(",")}) — possible env leak`,
             evidence: file.lines[sendLines[0]! - 1]?.trim().slice(0, 120),
+            confidence: sdkConf,
           });
         }
       }

@@ -80,6 +80,7 @@ export function collectFiles(dir: string, base?: string): ScannedFile[] {
       try {
         const content = readFileSync(fullPath, "utf-8");
         const relPath = relative(root, fullPath);
+        const sdkResult = detectKnownSdks(content);
         files.push({
           filePath: fullPath,
           relativePath: relPath,
@@ -87,6 +88,8 @@ export function collectFiles(dir: string, base?: string): ScannedFile[] {
           lines: content.split("\n"),
           ext,
           context: detectFileContext(relPath, name),
+          usesKnownSdk: sdkResult.length > 0,
+          detectedSdks: sdkResult.length > 0 ? sdkResult : undefined,
         });
       } catch {
         // skip unreadable files
@@ -152,4 +155,69 @@ function detectFileContext(relativePath: string, fileName: string): FileContext 
   }
 
   return "source";
+}
+
+// ─── Known safe SDK detection ───
+
+/** Well-known SDK package prefixes that indicate legitimate API usage */
+const KNOWN_SDK_PATTERNS: Array<{ pattern: RegExp; name: string }> = [
+  // Feishu / Lark
+  { pattern: /@larksuiteoapi\//, name: "@larksuiteoapi/*" },
+  { pattern: /feishu-sdk/, name: "feishu-sdk" },
+  // AWS
+  { pattern: /@aws-sdk\//, name: "@aws-sdk/*" },
+  { pattern: /aws-sdk/, name: "aws-sdk" },
+  // Google Cloud
+  { pattern: /@google-cloud\//, name: "@google-cloud/*" },
+  { pattern: /googleapis/, name: "googleapis" },
+  // Azure
+  { pattern: /@azure\//, name: "@azure/*" },
+  // Stripe
+  { pattern: /["']stripe["']/, name: "stripe" },
+  // Twilio
+  { pattern: /["']twilio["']/, name: "twilio" },
+  // SendGrid
+  { pattern: /@sendgrid\//, name: "@sendgrid/*" },
+  // Slack
+  { pattern: /@slack\//, name: "@slack/*" },
+  // Discord
+  { pattern: /discord\.js/, name: "discord.js" },
+  // Telegram
+  { pattern: /node-telegram-bot-api|telegraf/, name: "telegram-bot" },
+  // OpenAI / Anthropic
+  { pattern: /["']openai["']/, name: "openai" },
+  { pattern: /@anthropic-ai\//, name: "@anthropic-ai/*" },
+  // Firebase
+  { pattern: /firebase-admin|@firebase\//, name: "firebase" },
+  // Supabase
+  { pattern: /@supabase\//, name: "@supabase/*" },
+  // GitHub Octokit
+  { pattern: /@octokit\//, name: "@octokit/*" },
+  // Python SDKs (import style)
+  { pattern: /from\s+boto3\s+import|import\s+boto3/, name: "boto3" },
+  { pattern: /from\s+google\.cloud\s+import/, name: "google-cloud-python" },
+  { pattern: /from\s+azure\.\w+\s+import/, name: "azure-python" },
+];
+
+/** Import patterns to match */
+const IMPORT_RE = /(?:import\s+.*?from\s+["']|require\s*\(\s*["']|from\s+\S+\s+import)/;
+
+/**
+ * Detect known safe SDKs in file content based on import statements.
+ * Returns list of detected SDK names.
+ */
+function detectKnownSdks(content: string): string[] {
+  const detected: string[] = [];
+  const lines = content.split("\n");
+
+  for (const line of lines) {
+    if (!IMPORT_RE.test(line)) continue;
+    for (const { pattern, name } of KNOWN_SDK_PATTERNS) {
+      if (pattern.test(line) && !detected.includes(name)) {
+        detected.push(name);
+      }
+    }
+  }
+
+  return detected;
 }

@@ -35,6 +35,7 @@ export const privilegeRule: Rule = {
         severity: "low",
         file: ".",
         message: "No SKILL.md found — permission analysis skipped",
+        confidence: "medium",
       });
       return findings;
     }
@@ -95,6 +96,7 @@ export const privilegeRule: Rule = {
           file: first?.file || skillMd.relativePath,
           line: first?.line,
           message: `Code uses '${cap}' capability but SKILL.md doesn't declare it (found in ${locations.length} location${locations.length > 1 ? "s" : ""})`,
+          confidence: "medium",
         });
       }
     }
@@ -107,6 +109,7 @@ export const privilegeRule: Rule = {
           severity: "low",
           file: skillMd.relativePath,
           message: `SKILL.md declares '${perm}' permission but code doesn't appear to use it`,
+          confidence: "medium",
         });
       }
     }
@@ -118,6 +121,7 @@ export const privilegeRule: Rule = {
         severity: "low",
         file: skillMd.relativePath,
         message: `Detected capabilities: ${[...usedCapabilities].join(", ")}`,
+        confidence: "medium",
       });
     }
 

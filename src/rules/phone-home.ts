@@ -38,6 +38,7 @@ export const phoneHomeRule: Rule = {
     for (const file of files) {
       if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".md") continue;
 
+      const sdkConf = file.usesKnownSdk ? "low" as const : "high" as const;
       const hasTimer = TIMER_RE.test(file.content);
       const hasHttp = HTTP_RE.test(file.content);
 
@@ -61,6 +62,7 @@ export const phoneHomeRule: Rule = {
               line: i + 1,
               message: "Periodic timer + HTTP request — possible beacon/phone-home pattern",
               evidence: line.trim().slice(0, 120),
+              confidence: sdkConf,
             });
             break;
           }

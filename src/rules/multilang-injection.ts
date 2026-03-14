@@ -131,6 +131,7 @@ export const multilangInjectionRule: Rule = {
               line: i + 1,
               message: `[${language}] ${description}`,
               evidence: trimmed.slice(0, 150),
+              confidence: "medium",
             });
             break; // One finding per line max
           }

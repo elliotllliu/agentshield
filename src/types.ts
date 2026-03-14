@@ -85,6 +85,10 @@ export interface ScannedFile {
   ext: string;
   /** Detected file context for false positive reduction */
   context: FileContext;
+  /** True if file imports a known safe SDK (e.g., @larksuiteoapi/, @aws-sdk/) */
+  usesKnownSdk?: boolean;
+  /** Names of known SDKs detected in imports */
+  detectedSdks?: string[];
 }
 
 /** Parsed SKILL.md metadata */

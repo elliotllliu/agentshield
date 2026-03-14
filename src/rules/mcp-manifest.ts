@@ -141,6 +141,7 @@ function checkMcpConfig(files: ScannedFile[], findings: Finding[]): void {
             severity: "low",
             file: mcpConfig.relativePath,
             message: `MCP config declares ${perms.length} permissions — consider reducing scope`,
+            confidence: "low",
           });
         }
       }
@@ -153,6 +154,7 @@ function checkMcpConfig(files: ScannedFile[], findings: Finding[]): void {
           severity: "low",
           file: mcpConfig.relativePath,
           message: "MCP config uses wildcard/all permissions",
+          confidence: "low",
         });
       }
     } catch {
@@ -161,6 +163,7 @@ function checkMcpConfig(files: ScannedFile[], findings: Finding[]): void {
         severity: "low",
         file: mcpConfig.relativePath,
         message: "Invalid JSON in MCP config file",
+        confidence: "low",
       });
     }
   }
@@ -191,6 +194,7 @@ function checkToolImplementations(files: ScannedFile[], findings: Finding[]): vo
             line: i + 1,
             message: `MCP tool: ${desc}`,
             evidence: line.trim().slice(0, 120),
+            confidence: "low",
           });
           break;
         }
@@ -218,6 +222,7 @@ function checkToolDescriptions(files: ScannedFile[], findings: Finding[]): void 
             line: i + 1,
             message: `Suspicious MCP tool description: ${desc}`,
             evidence: line.trim().slice(0, 120),
+            confidence: "low",
           });
           break;
         }
@@ -245,6 +250,7 @@ function checkInputValidation(files: ScannedFile[], findings: Finding[]): void {
         severity: "low",
         file: file.relativePath,
         message: "MCP tool accepts path inputs but has no visible path validation/sanitization",
+        confidence: "low",
       });
     }
   }
@@ -271,6 +277,7 @@ function checkDynamicToolLoading(files: ScannedFile[], findings: Finding[]): voi
             line: i + 1,
             message: `Dynamic tool loading: ${desc}`,
             evidence: line.trim().slice(0, 120),
+            confidence: "low",
           });
           break;
         }
@@ -301,6 +308,7 @@ function checkEntityCount(files: ScannedFile[], findings: Finding[]): void {
             severity: "low",
             file: file.relativePath,
             message: `W002: Server "${serverName}" exposes ${total} entities (${tools} tools, ${resources} resources, ${prompts} prompts) — agent performance may degrade above 100`,
+            confidence: "low",
           });
         } else if (total > 50) {
           findings.push({
@@ -308,6 +316,7 @@ function checkEntityCount(files: ScannedFile[], findings: Finding[]): void {
             severity: "low",
             file: file.relativePath,
             message: `Server "${serverName}" exposes ${total} entities — consider reducing for optimal agent performance`,
+            confidence: "low",
           });
         }
       }

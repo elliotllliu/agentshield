@@ -36,6 +36,7 @@ export const hiddenFilesRule: Rule = {
             severity: "low",
             file: file.relativePath,
             message: `${desc} found in repository — should be in .gitignore`,
+            confidence: "medium",
           });
 
           // Check for actual secrets in the file
@@ -49,6 +50,7 @@ export const hiddenFilesRule: Rule = {
                 line: i + 1,
                 message: "Hardcoded secret in environment file",
                 evidence: line.replace(/=.*/, "=***").slice(0, 80),
+                confidence: "medium",
               });
             }
           }

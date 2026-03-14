@@ -40,6 +40,7 @@ export const excessivePermsRule: Rule = {
           severity: "low",
           file: skillMd.relativePath,
           message: `Requests dangerous permission: '${perm}'`,
+          confidence: "medium",
         });
       }
     }
@@ -51,6 +52,7 @@ export const excessivePermsRule: Rule = {
         severity: "low",
         file: skillMd.relativePath,
         message: `Requests ${permissions.length} permissions (threshold: ${MAX_REASONABLE_PERMS}) — review if all are necessary`,
+        confidence: "medium",
       });
     }
 

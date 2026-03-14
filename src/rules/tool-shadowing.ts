@@ -63,6 +63,7 @@ export const toolShadowing: Rule = {
                 line: i + 1,
                 message: `Tool shadowing: ${description}`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "low",
               });
               break;
             }
@@ -82,6 +83,7 @@ export const toolShadowing: Rule = {
                 line: i + 1,
                 message: `References well-known tool "${toolName}" with override intent`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "low",
               });
               break;
             }
@@ -106,6 +108,7 @@ export const toolShadowing: Rule = {
           severity: "medium",
           file: servers[0]!,
           message: `Tool name conflict: "${toolName}" defined in ${servers.length} servers (${servers.join(", ")}) — potential tool shadowing attack`,
+          confidence: "low",
         });
       }
     }

@@ -53,6 +53,9 @@ export const dataExfilRule: Rule = {
     for (const file of files) {
       if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".toml" || file.ext === ".md") continue;
 
+      // SDK-aware confidence: if file uses known SDKs, lower confidence for network findings
+      const sdkConf = file.usesKnownSdk ? "low" as const : "high" as const;
+
       const content = file.content;
       const hasSensitiveRead = SENSITIVE_READ_RE.test(content);
       const hasHttpSend = HTTP_SEND_RE.test(content);
@@ -85,6 +88,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads sensitive data (line ${readLines.join(",")}) and sends HTTP request to known safe API (line ${sendLines.join(",")}) — possible exfiltration, but to safe domain. Review required.`,
               evidence: httpSendLine.trim().slice(0, 120),
+              confidence: sdkConf,
             });
           } else {
             findings.push({
@@ -94,6 +98,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads sensitive data (line ${readLines.join(",")}) and sends HTTP request (line ${sendLines.join(",")}) — possible exfiltration`,
               evidence: httpSendLine?.trim().slice(0, 120),
+              confidence: sdkConf,
             });
           }
         } else if (hasSafeCredentials && sendLines.length > 0) {
@@ -112,6 +117,7 @@ export const dataExfilRule: Rule = {
               line: sendLines[0],
               message: `Reads credentials via safe access (line ${readLines.join(",")}) and sends HTTP request to unknown domain (line ${sendLines.join(",")}) — potential exfiltration`,
               evidence: httpSendLine?.trim().slice(0, 120),
+              confidence: sdkConf,
             });
           }
         }
@@ -128,6 +134,7 @@ export const dataExfilRule: Rule = {
             line: i + 1,
             message: "Dynamic URL construction in HTTP request — potential SSRF",
             evidence: line.trim().slice(0, 120),
+            confidence: sdkConf,
           });
         }
       }

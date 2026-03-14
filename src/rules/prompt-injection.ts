@@ -267,6 +267,7 @@ export const promptInjection: Rule = {
               line: i + 1,
               message: `Prompt injection: ${description}`,
               evidence: line.trim().substring(0, 120),
+              confidence: "medium",
             });
             break; // One finding per line
           }
@@ -290,6 +291,7 @@ export const promptInjection: Rule = {
               line: lineNum,
               message: "TPA: <IMPORTANT> block with suspicious instructions (Invariant Labs attack pattern)",
               evidence: match[0]!.substring(0, 120),
+              confidence: "medium",
             });
           }
         }
@@ -309,6 +311,7 @@ export const promptInjection: Rule = {
                 line: i + 1,
                 message: `Suspicious URL: ${description}`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "medium",
               });
               break;
             }
@@ -327,6 +330,7 @@ export const promptInjection: Rule = {
             severity: "medium",
             file: file.relativePath,
             message: `High instruction density (${instructionWords} directive words in ${wordCount} words) — may indicate tool poisoning`,
+            confidence: "medium",
           });
         }
       }
@@ -347,6 +351,7 @@ export const promptInjection: Rule = {
               line: lineNum,
               message: "TPA: Python MCP tool docstring with hidden instructions",
               evidence: docstring.substring(0, 120).replace(/\n/g, " "),
+              confidence: "medium",
             });
           }
           // Check for concealment in docstrings
@@ -359,6 +364,7 @@ export const promptInjection: Rule = {
               line: lineNum,
               message: "TPA: Python docstring with user concealment instructions",
               evidence: docstring.substring(0, 120).replace(/\n/g, " "),
+              confidence: "medium",
             });
           }
         }

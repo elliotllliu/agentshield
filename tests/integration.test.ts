@@ -59,36 +59,36 @@ describe("score", () => {
     const findings = [
       { rule: "test", severity: "high" as const, file: "a.ts", message: "bad" },
     ];
-    // With new scoring: high penalty (35) caps score at 30
+    // No confidence set → defaults to "medium" (0.6 multiplier)
+    // high penalty: 35 * 1.0 * 0.6 = 21 → score = 79
     const score = computeScore(findings);
-    // The legacy computeScore() doesn't apply caps.
-    // It will return 100 - 35 = 65
-    assert.equal(score, 65);
+    assert.equal(score, 79);
   });
 
   it("applies diminishing deduction for medium severity", () => {
     const findings = [
       { rule: "test", severity: "medium" as const, file: "a.ts", message: "meh" },
     ];
-    // With new scoring: medium penalty (10)
-    assert.equal(computeScore(findings), 90);
+    // medium penalty: 10 * 1.0 * 0.6 = 6 → score = 94
+    assert.equal(computeScore(findings), 94);
   });
 
   it("deducts 2 per low risk", () => {
     const findings = [
       { rule: "test", severity: "low" as const, file: "a.ts", message: "ok" },
     ];
-    // With new scoring: low penalty (3)
-    assert.equal(computeScore(findings), 97);
+    // low penalty: 3 * 1.0 * 0.6 = 1.8 → score = 98.2
+    assert.equal(computeScore(findings), 98.2);
   });
 
   it("diminishing returns prevent score from reaching 0", () => {
     const findings = Array.from({ length: 10 }, () => ({
       rule: "test", severity: "high" as const, file: "a.ts", message: "bad",
     }));
-    // With new scoring: multiple high findings will go to -100
+    // With 10 high findings at medium confidence (0.6): still significant deduction
     const score = computeScore(findings);
-    assert.ok(score <= 0, `score ${score} should be <= 0`);
+    assert.ok(score >= 0, `score ${score} should be >= 0 (floor is 0)`);
+    assert.ok(score <= 35, `score ${score} should be <= 35 with many high findings`);
   });
 
   it("riskLabel returns correct labels", () => {

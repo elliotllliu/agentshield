@@ -73,6 +73,57 @@ export function printReport(result: ScanResult): void {
       console.log(chalk.bold(`🏅 Bonus: +${scoreResult.bonus}`) + chalk.dim(` (${scoreResult.bonusReasons.join(", ")})`));
       console.log();
     }
+
+    // Score breakdown (transparency)
+    if (findings.filter(f => !f.possibleFalsePositive).length > 0) {
+      console.log(chalk.bold("📋 Score Breakdown:"));
+      console.log(chalk.dim(`  Base: 100`));
+
+      // Collect deductions by rule
+      const deductions: Array<{ rule: string; severity: string; confidence: string; count: number; total: number }> = [];
+      const ruleTotals: Record<string, { severity: string; confidence: string; count: number; total: number }> = {};
+
+      for (const f of findings.filter(f => !f.possibleFalsePositive)) {
+        const key = `${f.rule}|${f.severity}|${f.confidence || "medium"}`;
+        if (!ruleTotals[key]) {
+          ruleTotals[key] = { severity: f.severity, confidence: f.confidence || "medium", count: 0, total: 0 };
+        }
+        ruleTotals[key]!.count++;
+      }
+
+      // Calculate approximate penalty for each group
+      for (const [key, info] of Object.entries(ruleTotals)) {
+        const rule = key.split("|")[0]!;
+        deductions.push({ rule, severity: info.severity, confidence: info.confidence, count: info.count, total: 0 });
+      }
+
+      // Sort by severity (high → medium → low)
+      const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      deductions.sort((a, b) => (sevOrder[a.severity] ?? 2) - (sevOrder[b.severity] ?? 2));
+
+      for (const d of deductions) {
+        const confLabel = d.confidence === "high" ? "" : d.confidence === "low" ? ", conf: low → ×0.3" : ", conf: medium → ×0.6";
+        const countLabel = d.count > 1 ? ` ×${d.count}` : "";
+        const sevColor = d.severity === "high" ? chalk.red : d.severity === "medium" ? chalk.yellow : chalk.green;
+        console.log(sevColor(`  ${d.rule}${countLabel} (${d.severity}${confLabel})`));
+      }
+
+      // Caps
+      const hasHighFindings = findings.some(f => f.severity === "high" && !f.possibleFalsePositive);
+      const hasMediumFindings = findings.some(f => f.severity === "medium" && !f.possibleFalsePositive);
+      if (hasHighFindings) {
+        console.log(chalk.red.dim(`  ⚠ Cap applied: high findings present → max 30`));
+      } else if (hasMediumFindings) {
+        console.log(chalk.yellow.dim(`  ⚠ Cap applied: medium findings present → max 85`));
+      }
+
+      if (scoreResult.bonus === 0 && (hasHighFindings || hasMediumFindings)) {
+        console.log(chalk.dim(`  ⚠ Bonus suppressed (security findings present)`));
+      }
+
+      console.log(chalk.bold(`  Final: ${scoreResult.overall}/100`));
+      console.log();
+    }
   }
 
   if (high > 0) console.log(chalk.red(`🔴 High Risk: ${high} finding${high > 1 ? "s" : ""}`));

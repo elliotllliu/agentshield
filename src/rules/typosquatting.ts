@@ -51,6 +51,7 @@ export const typosquattingRule: Rule = {
               severity: "low",
               file: pkgJson.relativePath,
               message: `Suspicious package "${depName}" — possible typosquat of "${legitimate}"`,
+              confidence: "low",
             });
           }
         }

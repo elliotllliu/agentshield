@@ -53,6 +53,8 @@ export const networkSsrfRule: Rule = {
     for (const file of files) {
       if (file.ext === ".json" || file.ext === ".yaml" || file.ext === ".yml" || file.ext === ".md") continue;
 
+      const sdkConf = file.usesKnownSdk ? "low" as const : "medium" as const;
+
       for (let i = 0; i < file.lines.length; i++) {
         const line = file.lines[i]!;
         const trimmed = line.trimStart();
@@ -70,6 +72,7 @@ export const networkSsrfRule: Rule = {
               line: i + 1,
               message: desc,
               evidence: line.trim().slice(0, 120),
+              confidence: sdkConf,
             });
             break;
           }

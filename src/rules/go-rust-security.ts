@@ -63,6 +63,7 @@ function runGoRustSecurity(files: ScannedFile[]): Finding[] {
           line: lineNum,
           message: `[${isGo ? "go" : "rust"}] [${category}] ${desc}`,
           evidence: file.lines[lineNum - 1]?.trim().substring(0, 120) || "",
+          confidence: "medium",
         });
       }
     }

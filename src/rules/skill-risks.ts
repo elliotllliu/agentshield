@@ -86,6 +86,7 @@ export const skillRisks: Rule = {
                 line: i + 1,
                 message: `Insecure credential handling: ${description}`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "low",
               });
               break;
             }
@@ -102,6 +103,7 @@ export const skillRisks: Rule = {
               line: i + 1,
               message: `Financial execution: ${description}`,
               evidence: line.trim().substring(0, 120),
+              confidence: "low",
             });
             break;
           }
@@ -118,6 +120,7 @@ export const skillRisks: Rule = {
                 line: i + 1,
                 message: `Untrusted content exposure: ${description}`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "low",
               });
               break;
             }
@@ -135,6 +138,7 @@ export const skillRisks: Rule = {
                 line: i + 1,
                 message: `Unverifiable external dependency: ${description}`,
                 evidence: line.trim().substring(0, 120),
+                confidence: "low",
               });
               break;
             }
@@ -151,6 +155,7 @@ export const skillRisks: Rule = {
               line: i + 1,
               message: `System modification: ${description}`,
               evidence: line.trim().substring(0, 120),
+              confidence: "low",
             });
             break;
           }

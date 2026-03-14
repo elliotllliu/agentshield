@@ -94,6 +94,7 @@ export const pythonSecurityRule: Rule = {
               line: i + 1,
               message: `[${category}] ${desc}`,
               evidence: line.trim().slice(0, 120),
+              confidence: "medium",
             });
           }
         }

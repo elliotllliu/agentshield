@@ -37,7 +37,7 @@ export const obfuscationRule: Rule = {
           // Find the line with eval/exec
           for (let i = 0; i < file.lines.length; i++) {
             if (/\beval\b|\bexec\b/.test(file.lines[i]!)) {
-              findings.push({ rule: "obfuscation", severity, file: file.relativePath, line: i + 1, message: desc, evidence: file.lines[i]!.trim().slice(0, 120) });
+              findings.push({ rule: "obfuscation", severity, file: file.relativePath, line: i + 1, message: desc, evidence: file.lines[i]!.trim().slice(0, 120), confidence: "medium", });
               break;
             }
           }
@@ -52,7 +52,7 @@ export const obfuscationRule: Rule = {
 
         for (const { pattern, desc, severity } of OBFUSCATION_PATTERNS.slice(3)) {
           if (pattern.test(line)) {
-            findings.push({ rule: "obfuscation", severity, file: file.relativePath, line: i + 1, message: desc, evidence: line.trim().slice(0, 120) });
+            findings.push({ rule: "obfuscation", severity, file: file.relativePath, line: i + 1, message: desc, evidence: line.trim().slice(0, 120), confidence: "medium", });
             break;
           }
         }
