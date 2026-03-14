@@ -37,8 +37,10 @@ const PLUGIN_PROMPT_INJECTION: Array<{ pattern: RegExp; description: string; sev
 const SKILLMD_BEHAVIORAL_OVERRIDE: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" }> = [
   // Forced priority claims
   { pattern: /(?:highest|top|first|absolute|maximum|ultimate|supreme)[\s-]*priority/i, description: "Claims highest priority over other skills", severity: "medium" },
-  { pattern: /MUST\s+(?:trigger|use|call|invoke|run|execute|activate|prefer|prioritize)/i, description: "Uses MUST to force agent behavior", severity: "medium" },
-  { pattern: /(?:always|mandatory|required|obligatory|compulsory)\s+(?:use|trigger|call|prefer|prioritize|choose)/i, description: "Mandatory behavioral directive", severity: "medium" },
+  // MUST + this skill / this tool / this flow (not generic "must use X")
+  { pattern: /MUST\s+(?:trigger|activate|use\s+this|invoke\s+this|run\s+this|call\s+this|prefer\s+this)/i, description: "Uses MUST to force agent to use this skill", severity: "medium" },
+  // "always trigger/use this skill" — not just "always use imperative form"
+  { pattern: /(?:always|mandatory|required|obligatory|compulsory)\s+(?:trigger|activate|invoke)\s+(?:this|the)\s+(?:skill|tool|plugin|flow)/i, description: "Mandatory activation directive for this skill", severity: "medium" },
   // Override other skills
   { pattern: /(?:override|replace|supersede|take\s+over|supplant)\s+(?:(?:other|existing|default|built-in|original)\s+)*(?:skills?|tools?|plugins?)/i, description: "Claims to override other skills/tools", severity: "high" },
   { pattern: /(?:ignore|skip|bypass|disable|suppress)\s+(?:(?:other|existing|default|built-in|original)\s+)*(?:skills?|tools?|plugins?)/i, description: "Instructs agent to ignore other skills", severity: "high" },
@@ -54,14 +56,14 @@ const SKILLMD_BEHAVIORAL_OVERRIDE: Array<{ pattern: RegExp; description: string;
 // Detects skills that redirect to their own commercial services
 
 const COMMERCIAL_HIJACK: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" }> = [
-  // Prefer X over Y / fallback patterns
-  { pattern: /(?:prefer|prioritize|try)\s+(?:`?\w+`?\s+)?(?:first|over|before|instead\s+of)\s+(?:`?\w+`?).*(?:fallback|fall\s*back)/is, description: "Redirects from one service to another with fallback pattern", severity: "medium" },
-  { pattern: /(?:try|use)\s+`?\w+`?\s+first.*(?:fallback|if\s+unavailable|if\s+.*fail)/is, description: "Establishes service preference hierarchy", severity: "medium" },
+  // Prefer X over Y / fallback patterns — must have explicit service names with backticks or quotes
+  { pattern: /(?:prefer|prioritize|try)\s+[`'"]\w+[`'"]\s+(?:first|over|before|instead\s+of)\s+[`'"]\w+[`'"]/i, description: "Redirects from one service to another with preference directive", severity: "medium" },
+  { pattern: /(?:try|use)\s+[`'"]\w+[`'"]\s+first.*(?:fallback|if\s+unavailable|if\s+.*fail).*[`'"]\w+[`'"]/is, description: "Establishes service preference hierarchy", severity: "medium" },
   // Store/marketplace redirection
   { pattern: /(?:our|my|this)\s+(?:skill\s+)?(?:store|marketplace|registry|hub|shop|market)/i, description: "Promotes own skill store/marketplace", severity: "medium" },
   { pattern: /(?:download|install|get)\s+(?:skills?|plugins?|tools?)\s+from\s+(?:our|my|this)/i, description: "Directs skill installation from own source", severity: "medium" },
   // Chinese variants
-  { pattern: /(?:优先使用|先试|先用)\s*(?:`?\w+`?)\s*[，,]?\s*(?:再|然后|否则|如果.*?不行)\s*(?:使用|用|试)/i, description: "Chinese: service preference ordering (优先使用X，再用Y)", severity: "medium" },
+  { pattern: /(?:优先使用|先试|先用)\s*(?:[`'"]\w+[`'"])\s*[，,]?\s*(?:再|然后|否则|如果.*?不行)\s*(?:使用|用|试)/i, description: "Chinese: service preference ordering (优先使用X，再用Y)", severity: "medium" },
   { pattern: /(?:我们的|自己的|本)\s*(?:技能|工具)\s*(?:商店|市场|平台|仓库)/i, description: "Chinese: promotes own skill store (技能商店)", severity: "medium" },
 ];
 
@@ -94,8 +96,6 @@ const REMOTE_CODE_EXEC: Array<{ pattern: RegExp; description: string; severity: 
   // External install instructions in SKILL.md (indirect RCE via agent)
   { pattern: /(?:follow|run|execute|install)\s+.*https?:\/\/\S+\.(?:sh|bash|py|rb)\b/i, description: "SKILL.md links to external install script — agent may execute it", severity: "medium" },
   { pattern: /\[.*\]\(https?:\/\/\S+install\S*\)/i, description: "SKILL.md contains external install link — potential indirect RCE", severity: "medium" },
-  // requires external binary installation
-  { pattern: /requires.*bins.*\[.*\]/i, description: "Requires external binary installation — review binary source", severity: "low" },
 ];
 
 export const skillHijackRule: Rule = {
@@ -155,8 +155,8 @@ export const skillHijackRule: Rule = {
         }
       }
 
-      // Category 3: Commercial hijacking (markdown + code)
-      if (isMarkdown || isCode) {
+      // Category 3: Commercial hijacking (markdown only — "fallback" is normal in code)
+      if (isMarkdown) {
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
           for (const { pattern, description, severity } of COMMERCIAL_HIJACK) {
