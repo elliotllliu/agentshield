@@ -19,16 +19,14 @@ import type { Rule, Finding, ScannedFile } from "../types.js";
 // Detects OpenClaw plugin APIs that inject content into prompts
 
 const PLUGIN_PROMPT_INJECTION: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" | "low" }> = [
-  // before_prompt_build hook with prependContext/appendContext
+  // before_prompt_build hook with prependContext/appendContext (must co-occur in same file)
   { pattern: /before_prompt_build.*prependContext|prependContext.*before_prompt_build/s, description: "Plugin injects content before every prompt via before_prompt_build + prependContext" , severity: "high" },
   { pattern: /before_prompt_build.*appendContext|appendContext.*before_prompt_build/s, description: "Plugin appends content to every prompt via before_prompt_build + appendContext", severity: "high" },
-  // Direct prompt manipulation
-  { pattern: /(?:event|ctx|context)\.prompt\s*[+=]|(?:event|ctx|context)\.prompt\s*=\s*[^=]/, description: "Plugin directly modifies prompt content", severity: "high" },
-  // System message injection
-  { pattern: /(?:system_message|systemMessage|system_prompt|systemPrompt)\s*[+=]|prependSystem|appendSystem/, description: "Plugin modifies system message/prompt", severity: "high" },
-  // Message interception with modification
-  { pattern: /before_message_send.*(?:message|content|text)\s*[+=]|on_message.*(?:message|content|text)\s*[+=]/s, description: "Plugin intercepts and modifies outgoing messages", severity: "high" },
-  { pattern: /before_message_receive.*(?:message|content|text)\s*[+=]|on_message_receive.*(?:message|content|text)\s*[+=]/s, description: "Plugin intercepts and modifies incoming messages", severity: "high" },
+  // Direct prompt manipulation via event object
+  { pattern: /(?:event|ctx|context)\.prompt\s*\+=/, description: "Plugin directly appends to prompt content", severity: "high" },
+  // Message interception with modification (require event hook name, not just response.text())
+  { pattern: /before_message_send.*(?:message|content)\s*\+=/s, description: "Plugin intercepts and modifies outgoing messages", severity: "high" },
+  { pattern: /before_message_receive.*(?:message|content)\s*\+=/s, description: "Plugin intercepts and modifies incoming messages", severity: "high" },
 ];
 
 // ─── Category 2: SKILL.md behavioral override ───
@@ -94,8 +92,8 @@ const SELF_REPLACE_PATTERNS: Array<{ pattern: RegExp; description: string; sever
   { pattern: /os\.execve\s*\(\s*sys\.executable/, description: "Self-replacing execution: downloads update then re-executes itself via os.execve", severity: "high" },
   // Generic self-replacement
   { pattern: /shutil\.(?:copyfile|move)\s*\(.*__file__/, description: "Overwrites own source file (self-update pattern)", severity: "medium" },
-  // Node: process replacement
-  { pattern: /child_process.*spawn.*process\.argv|exec.*process\.execPath/, description: "Re-spawns own process after modification", severity: "medium" },
+  // Node: process replacement (must be spawn/exec call, not just property access)
+  { pattern: /child_process.*spawn\s*\(.*process\.argv/, description: "Re-spawns own process after modification", severity: "medium" },
 ];
 
 // Patterns for hardcoded private download sources (not package registries)
@@ -156,16 +154,19 @@ export const skillHijackRule: Rule = {
     const findings: Finding[] = [];
 
     for (const file of files) {
-      const isSkillMd = file.relativePath.toLowerCase().includes("skill.md") || file.relativePath.toLowerCase().includes("skill.");
-      const isPlugin = file.relativePath.toLowerCase().includes("plugin") ||
-                       file.relativePath.toLowerCase().includes("extension") ||
-                       file.ext === ".ts" || file.ext === ".js";
-      const isShellScript = file.ext === ".sh" || file.ext === ".bash";
       const isMarkdown = file.ext === ".md";
+      const isSkillMd = file.relativePath.toLowerCase().includes("skill.md") || file.relativePath.toLowerCase().includes("skill.");
+      const isShellScript = file.ext === ".sh" || file.ext === ".bash";
       const isCode = [".ts", ".js", ".mjs", ".cjs", ".py"].includes(file.ext);
+      const isPlugin = !isMarkdown && (file.relativePath.toLowerCase().includes("plugin") ||
+                       file.relativePath.toLowerCase().includes("extension") ||
+                       file.ext === ".ts" || file.ext === ".js");
 
-      // Category 1: Plugin prompt injection (code files only)
-      if (isCode || isPlugin) {
+      const isTestFile = /\.test\.|\.spec\.|__test__|__spec__|\/test\/|\/tests\/|\/spec\//i.test(file.relativePath);
+      const isDocFile = /\/docs?\/|README|CHANGELOG|CONTRIBUTING|\.md$/i.test(file.relativePath) && !isSkillMd;
+
+      // Category 1: Plugin prompt injection (code files only, skip tests and docs)
+      if ((isCode || isPlugin) && !isTestFile && !isDocFile) {
         // Check full file content for multi-line patterns
         for (const { pattern, description, severity } of PLUGIN_PROMPT_INJECTION) {
           if (pattern.test(file.content)) {
@@ -183,8 +184,8 @@ export const skillHijackRule: Rule = {
         }
       }
 
-      // Category 2: SKILL.md behavioral override (markdown files, especially SKILL.md)
-      if (isMarkdown) {
+      // Category 2: SKILL.md behavioral override (SKILL.md files ONLY — not general docs)
+      if (isMarkdown && isSkillMd) {
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
           for (const { pattern, description, severity } of SKILLMD_BEHAVIORAL_OVERRIDE) {
@@ -204,8 +205,8 @@ export const skillHijackRule: Rule = {
         }
       }
 
-      // Category 3: Commercial hijacking (markdown only — "fallback" is normal in code)
-      if (isMarkdown) {
+      // Category 3: Commercial hijacking (SKILL.md only — "fallback"/"priority" is normal in docs)
+      if (isMarkdown && isSkillMd) {
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
           for (const { pattern, description, severity } of COMMERCIAL_HIJACK) {
@@ -258,6 +259,7 @@ export const skillHijackRule: Rule = {
             /(?:console\.log|print|echo|puts|logger\.|log\.|warn\(|info\(|error\(|debug\()\s*\(?/i.test(trimmed) ||
             /(?:console\.log|print|echo)\s*\(?\s*["'`]/.test(trimmed) ||
             /^\s*["'`].*openclaw\s+config/.test(trimmed) ||
+            /^\s*return\s+["'`]/.test(trimmed) ||
             /\w(?:[Tt]ext|[Mm]sg|[Mm]essage|[Dd]escription|[Ll]abel|[Tt]itle|[Hh]int|[Hh]elp|[Uu]sage|[Dd]octor|[Rr]epair|[Ff]ix|[Ss]uggest|[Tt]ip|[Ee]xample)\s*[:=]\s*["'`]/.test(trimmed) ||
             /^\s*["'`\\]/.test(trimmed);
           if (isHelpContext) continue;
@@ -279,8 +281,8 @@ export const skillHijackRule: Rule = {
         }
       }
 
-      // Category 5: Silent OTA / Self-replacing code + private download sources
-      if (isCode) {
+      // Category 5: Silent OTA / Self-replacing code + private download sources (skip tests)
+      if (isCode && !isTestFile) {
         // 5a: Self-replacing patterns
         for (let i = 0; i < file.lines.length; i++) {
           const line = file.lines[i]!;
@@ -363,8 +365,8 @@ export const skillHijackRule: Rule = {
             }
           }
 
-          // 5b: Markdown — check install links and instructions
-          if (isMarkdown) {
+          // 5b: Markdown — check install links and instructions (SKILL.md only)
+          if (isMarkdown && isSkillMd) {
             // Skip lines that are standard package manager commands
             if (SAFE_INSTALL_CMD_RE.test(line)) continue;
 
