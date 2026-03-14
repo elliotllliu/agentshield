@@ -279,14 +279,22 @@ export const skillHijackRule: Rule = {
 
           for (const { pattern, description, severity } of CONFIG_TAMPER) {
             if (pattern.test(line)) {
+              // Downgrade severity for security/diagnostic tools — dynamic config
+              // commands in repair/check tools are legitimate behavior
+              const isRepairTool = /(?:security[-_]?check|doctor|repair|health[-_]?check|diagnostic|fix[-_]?config|setup[-_]?wizard|troubleshoot)/i.test(file.relativePath);
+              const effectiveSeverity = isRepairTool ? "low" as const : severity;
+              const effectiveConfidence = isRepairTool ? "low" as const : "high" as const;
+
               findings.push({
                 rule: "skill-hijack",
-                severity,
+                severity: effectiveSeverity,
                 file: file.relativePath,
                 line: i + 1,
-                message: `Config tampering: ${description}`,
+                message: isRepairTool
+                  ? `Config tampering (repair tool context): ${description}`
+                  : `Config tampering: ${description}`,
                 evidence: trimmed.slice(0, 120),
-                confidence: "high",
+                confidence: effectiveConfidence,
               });
               break;
             }
