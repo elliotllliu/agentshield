@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/@elliotllliu/agent-shield)](https://www.npmjs.com/package/@elliotllliu/agent-shield)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-236%20passing-brightgreen)]()
-[![Rules](https://img.shields.io/badge/rules-28-blue)]()
+[![Rules](https://img.shields.io/badge/rules-29-blue)]()
 
 > Free, offline, zero-config AI Agent security scanner.
 > Quickly check your skills, MCP servers, and plugins for security issues.

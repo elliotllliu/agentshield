@@ -86,11 +86,16 @@ const CONFIG_TAMPER: Array<{ pattern: RegExp; description: string; severity: "hi
 // ─── Category 5: Remote code execution via install scripts ───
 // Detects curl|bash and similar patterns
 
-const REMOTE_CODE_EXEC: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" }> = [
+const REMOTE_CODE_EXEC: Array<{ pattern: RegExp; description: string; severity: "high" | "medium" | "low" }> = [
   { pattern: /curl\s+.*\|\s*(?:bash|sh|zsh)/i, description: "Downloads and executes remote script (curl | bash)", severity: "high" },
   { pattern: /wget\s+.*\|\s*(?:bash|sh|zsh)/i, description: "Downloads and executes remote script (wget | bash)", severity: "high" },
   { pattern: /curl\s+.*-o\s+\S+\s*&&\s*(?:bash|sh|chmod\s+\+x)/i, description: "Downloads script, then executes it", severity: "high" },
   { pattern: /tar\s+-xzf.*&&.*(?:bash|sh|\.\/install)/i, description: "Extracts archive and runs installer", severity: "medium" },
+  // External install instructions in SKILL.md (indirect RCE via agent)
+  { pattern: /(?:follow|run|execute|install)\s+.*https?:\/\/\S+\.(?:sh|bash|py|rb)\b/i, description: "SKILL.md links to external install script — agent may execute it", severity: "medium" },
+  { pattern: /\[.*\]\(https?:\/\/\S+install\S*\)/i, description: "SKILL.md contains external install link — potential indirect RCE", severity: "medium" },
+  // requires external binary installation
+  { pattern: /requires.*bins.*\[.*\]/i, description: "Requires external binary installation — review binary source", severity: "low" },
 ];
 
 export const skillHijackRule: Rule = {
