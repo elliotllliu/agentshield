@@ -84,10 +84,27 @@ export async function aggregateScan(
     }),
   );
 
-  // Aggregate
-  const allFindings = results
+  // Aggregate — deduplicate overlapping engines
+  // Skill Vetter internally runs aguara, so if both are active,
+  // remove skill-vetter findings that duplicate aguara findings
+  let allFindings = results
     .filter(r => r.findings)
     .flatMap(r => r.findings!);
+
+  const hasAguara = results.some(r => r.engine === "aguara" && r.available && r.findings);
+  const hasSkillVetter = results.some(r => r.engine === "skill-vetter" && r.available && r.findings);
+  if (hasAguara && hasSkillVetter) {
+    // Remove skill-vetter aguara-sourced findings (they duplicate the direct aguara engine)
+    const aguaraKeys = new Set(
+      allFindings.filter(f => f.engine === "aguara").map(f => `${f.file}:${f.line}`)
+    );
+    allFindings = allFindings.filter(f => {
+      if (f.engine !== "skill-vetter") return true;
+      // Keep non-aguara skill-vetter findings (secrets, structure checks)
+      if (!f.file || !f.line) return true;
+      return !aguaraKeys.has(`${f.file}:${f.line}`);
+    });
+  }
 
   const crossValidated = crossValidate(allFindings, results.filter(r => r.available).length);
 
@@ -110,8 +127,8 @@ function crossValidate(findings: EngineFinding[], totalEngines: number): CrossVa
   const groups = new Map<string, { finding: EngineFinding; engines: Set<string> }>();
 
   for (const f of findings) {
-    // Normalize key: file + line bucket (within 5 lines) + severity category
-    const lineBucket = f.line ? Math.floor(f.line / 5) * 5 : 0;
+    // Normalize key: file + line bucket (within 3 lines) + category
+    const lineBucket = f.line ? Math.floor(f.line / 3) * 3 : 0;
     const category = normalizeCategory(f.rule, f.message);
     const key = `${f.file}:${lineBucket}:${category}`;
 
@@ -141,14 +158,19 @@ function crossValidate(findings: EngineFinding[], totalEngines: number): CrossVa
  */
 function normalizeCategory(rule: string, message: string): string {
   const combined = `${rule} ${message}`.toLowerCase();
-  if (/prompt.?inject|injection|override|ignore.*instruct/i.test(combined)) return "prompt-injection";
-  if (/eval|exec|backdoor|command.*inject|child_process|spawn/i.test(combined)) return "code-execution";
-  if (/exfil|data.*leak|sensitive.*send|credential.*http/i.test(combined)) return "data-exfil";
-  if (/secret|api.?key|token|credential|password|hardcod/i.test(combined)) return "credentials";
-  if (/ssrf|request.*forg|url.*construct/i.test(combined)) return "ssrf";
-  if (/supply.?chain|hijack|tamper|config.*modify/i.test(combined)) return "supply-chain";
-  if (/obfuscat|encode|pack|minif/i.test(combined)) return "obfuscation";
-  if (/env.*var|process\.env|environ/i.test(combined)) return "env-access";
+  if (/prompt.?inject|injection|override|ignore.*instruct|system.*prompt/i.test(combined)) return "prompt-injection";
+  if (/eval|exec|backdoor|command.*inject|child_process|spawn|code.*gen|dynamic.*exec/i.test(combined)) return "code-execution";
+  if (/exfil|data.*leak|sensitive.*send|credential.*http|phone.*home/i.test(combined)) return "data-exfil";
+  if (/secret|api.?key|token|credential|password|hardcod|private.?key/i.test(combined)) return "credentials";
+  if (/ssrf|request.*forg|url.*construct|http.*downgrad/i.test(combined)) return "ssrf";
+  if (/supply.?chain|hijack|tamper|config.*modify|config.*tamper/i.test(combined)) return "supply-chain";
+  if (/obfuscat|encode|pack|minif|unicode.*escape/i.test(combined)) return "obfuscation";
+  if (/env.*var|process\.env|environ|env.*leak/i.test(combined)) return "env-access";
+  if (/intercept|hook|monkey.?patch|tool.*output/i.test(combined)) return "interception";
+  if (/uri.*manip|resource.*uri|path.*travers/i.test(combined)) return "path-traversal";
+  if (/shell|dangerous.*command|rm\s+-rf/i.test(combined)) return "dangerous-commands";
+  if (/mcp|remote.*server|non.?localhost/i.test(combined)) return "mcp-config";
+  if (/regex|redos|re.*inject/i.test(combined)) return "regex-injection";
   return "other";
 }
 
