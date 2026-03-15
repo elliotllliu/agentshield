@@ -1,169 +1,171 @@
 # 🛡️ AgentShield
 
-**给你的 AI 做个体检。**
+**Give your AI a health check.**
 
-你从网上下了一个 MCP Server / Skill / Plugin，准备装上用。但你心里可能有个疑问：
+[中文文档](./README.zh-CN.md)
 
-> 这东西安全吗？会不会偷我的密钥？会不会劫持我的 AI？
+You found an MCP Server / Skill / Plugin online and want to install it. But you're wondering:
 
-**AgentShield 帮你 3 秒搞定。** 一行命令，4 个扫描引擎自动跑，给你一份清清楚楚的中文报告。
+> Is this thing safe? Will it steal my API keys? Hijack my AI? Mine crypto?
+
+**AgentShield answers that in 3 seconds.** One command, 4 independent scanning engines, one clear report.
 
 ```bash
-npx @elliotllliu/agent-shield scan ./那个你想装的东西
+npx @elliotllliu/agent-shield scan ./that-thing-you-want-to-install
 ```
 
-就这么简单。首次运行会自动帮你装好所有引擎，之后秒出结果。
+That's it. First run auto-installs all engines. After that, results come in seconds.
 
 ---
 
-## 看看效果
+## See It In Action
 
-### 扫到风险的时候
+### When risks are found
 
 ```
-🛡️  安全检测报告
+🛡️  Security Report
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📁 检测对象:  ./mcp-playwright
-🔧 检测引擎:  4 个独立扫描器
-⏱  总耗时:    12.3s
+📁 Target:   ./mcp-playwright
+🔧 Engines:  4 independent scanners
+⏱  Time:     12.3s
 
 ──────────────────────────────────────────────────────
-🔍 各方检测结论
+🔍 Individual Conclusions
 ──────────────────────────────────────────────────────
 
-🛡️ AgentShield — AI Agent 安全
-   结论: ⚠️ 发现 2 处需关注
-   • 代码混淆
+🛡️ AgentShield — AI Agent Security
+   Verdict: ⚠️ 2 items need attention
+   • Code obfuscation
      📍 src/index.ts:1
 
-🔍 Aguara — 通用代码安全
-   结论: ✅ 未发现风险
+🔍 Aguara — General Code Security
+   Verdict: ✅ No risks found
 
-🔎 Semgrep — 代码质量与注入检测
-   结论: ✅ 未发现风险
+🔎 Semgrep — Code Quality & Injection
+   Verdict: ✅ No risks found
 
-🧪 Invariant — MCP Tool Poisoning 检测
-   结论: ✅ 未发现风险
+🧪 Invariant — MCP Tool Poisoning
+   Verdict: ✅ No risks found
 
 ──────────────────────────────────────────────────────
-📊 综合结论
+📊 Overall Assessment
 ──────────────────────────────────────────────────────
 
-✅ 整体安全，有少量提示
-   3/4 个引擎未检出风险
+✅ Safe overall, minor notes
+   3/4 engines found no issues
 
-  ✅ 后门/远程控制  — 4 个引擎均未检出
-  ✅ 数据窃取       — 4 个引擎均未检出
-  ✅ Prompt 注入    — 4 个引擎均未检出
-  ✅ 挖矿行为       — 4 个引擎均未检出
+  ✅ Backdoors        — All 4 engines clear
+  ✅ Data theft        — All 4 engines clear
+  ✅ Prompt injection  — All 4 engines clear
+  ✅ Crypto mining     — All 4 engines clear
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**你一眼就知道：4 个引擎里 3 个说没问题，最重要的威胁全部排除。放心装。**
+**One glance: 3 out of 4 engines say it's clean. All major threats cleared. Safe to install.**
 
-### 没问题的时候
+### When everything is clean
 
 ```
-✅ 所有引擎均未检出风险
+✅ All engines found no risks
 
-  ✅ 后门/远程控制  — 4 个引擎均未检出
-  ✅ 数据窃取       — 4 个引擎均未检出
-  ✅ Prompt 注入    — 4 个引擎均未检出
-  ✅ 挖矿行为       — 4 个引擎均未检出
+  ✅ Backdoors        — All 4 engines clear
+  ✅ Data theft        — All 4 engines clear
+  ✅ Prompt injection  — All 4 engines clear
+  ✅ Crypto mining     — All 4 engines clear
 ```
 
-**全绿灯，大胆装。**
+**All green. Go ahead and install.**
 
 ---
 
-## 凭什么信？
+## Why Trust It?
 
-因为不是一个引擎说了算。是 **4 个独立的扫描引擎**，它们互相不认识，各扫各的。然后我们汇总它们的意见：
+Because it's not one engine making the call. It's **4 independent scanning engines** that don't know each other, each doing their own analysis. Then we compare notes:
 
-| 引擎 | 它擅长什么 |
-|------|-----------|
-| 🛡️ **AgentShield** | AI Agent 专项 — Skill 劫持、Prompt 注入、MCP 运行时安全 |
-| 🔍 **[Aguara](https://github.com/garagon/aguara)** | 通用代码安全 — 177 条规则，数据外渗、污点追踪 |
-| 🔎 **[Semgrep](https://github.com/semgrep/semgrep)** | 代码质量 — 2000+ 条规则，注入、XSS、硬编码凭证 |
-| 🧪 **[Invariant](https://github.com/invariantlabs-ai/mcp-scan)** | MCP 专项 — Tool Poisoning、跨域提权、Rug Pull |
+| Engine | What it's good at |
+|--------|------------------|
+| 🛡️ **AgentShield** | AI Agent threats — skill hijack, prompt injection, MCP runtime |
+| 🔍 **[Aguara](https://github.com/garagon/aguara)** | General security — 177 rules, data exfil, taint tracking |
+| 🔎 **[Semgrep](https://github.com/semgrep/semgrep)** | Code quality — 2000+ rules, injection, XSS, hardcoded secrets |
+| 🧪 **[Invariant](https://github.com/invariantlabs-ai/mcp-scan)** | MCP-specific — tool poisoning, cross-origin escalation, rug pull |
 
-**如果 3 个引擎说安全，1 个说危险 → 那大概率是误报。**
-**如果 3 个引擎都说危险 → 那就是真的危险。**
+**If 3 engines say safe and 1 says dangerous → probably a false positive.**
+**If 3 engines say dangerous → it's real.**
 
-这就是多引擎共识的价值。跟 VirusTotal 是一个道理。
+Same idea as VirusTotal, but for AI agent plugins.
 
 ---
 
-## 首次运行
+## First Run
 
-首次运行会自动帮你安装其他引擎（装到 `~/.agentshield/`，不需要 sudo）：
+First time you run it, engines are auto-installed (to `~/.agentshield/`, no sudo needed):
 
 ```
-🔧 检查引擎...
-  ✅ AgentShield — 已就绪
-  📦 Aguara — 正在安装... 完成
-  📦 Semgrep — 正在安装... 完成
-  📦 Invariant — 正在安装... 完成
+🔧 Checking engines...
+  ✅ AgentShield — Ready
+  📦 Aguara — Installing... Done
+  📦 Semgrep — Installing... Done
+  📦 Invariant — Installing... Done
 ```
 
-**装一次，后面就秒跑。**
+**One-time setup. After that, it's instant.**
 
 ---
 
-## 都能扫出什么？
+## What Can It Detect?
 
-| 风险 | 啥意思 |
-|------|------|
-| 🔴 插件劫持 | 它在偷偷改你 AI 的设置 |
-| 🔴 后门 | 它能悄悄执行任意代码 |
-| 🔴 远程控制 | 它在连外面的服务器 + 开 shell |
-| ⚠️ 偷数据 | 它读了你的密钥/文件然后发出去了 |
-| ⚠️ Prompt 注入 | 它在偷偷给你的 AI 加指令 |
-| ⚠️ Tool Poisoning | 工具描述里藏了恶意指令 |
-| ⚠️ 代码混淆 | 代码故意搞得看不懂，可能在藏什么 |
-| ℹ️ 权限过大 | 它要的权限比它需要的多 |
+| Risk | What it means |
+|------|--------------|
+| 🔴 Skill Hijack | It's secretly modifying your AI's config |
+| 🔴 Backdoor | It can silently execute arbitrary code |
+| 🔴 Remote Control | It's connecting to external servers + opening a shell |
+| ⚠️ Data Theft | It reads your keys/files and sends them out |
+| ⚠️ Prompt Injection | It's secretly adding instructions to your AI |
+| ⚠️ Tool Poisoning | Hidden malicious instructions in tool descriptions |
+| ⚠️ Obfuscated Code | Code is intentionally unreadable — might be hiding something |
+| ℹ️ Excessive Permissions | It asks for more than it needs |
 
 ---
 
-## 其他玩法
+## More Options
 
 ```bash
-# HTML 报告，发给同事看
+# HTML report (shareable)
 agent-shield scan ./dir --html -o report.html
 
-# JSON，接到 CI/CD 里
+# JSON (for CI/CD)
 agent-shield scan ./dir --json
 
-# 英文报告
-agent-shield scan ./dir --lang en
+# Chinese report (default)
+agent-shield scan ./dir --lang zh
 
-# SARIF，GitHub Code Scanning
+# SARIF (GitHub Code Scanning)
 agent-shield scan ./dir --sarif -o results.sarif
 ```
 
 ---
 
-## 安装
+## Install
 
 ```bash
-# 推荐：用 npx，不用装
+# Recommended: use npx, nothing to install
 npx @elliotllliu/agent-shield scan ./my-skill/
 
-# 或者全局装
+# Or install globally
 npm install -g @elliotllliu/agent-shield
 ```
 
 ---
 
-## 我们怎么想的
+## Our Philosophy
 
-> **"我们是 X 光机，不是医生。我们照出里面有什么 — 你来决定要不要装。"**
+> **"We're the X-ray machine, not the doctor. We show you what's inside — you decide whether to install it."**
 
-我们不替你做决定。我们把 4 个引擎的结论摆出来，把危险的地方标出来，把安全的地方也告诉你。然后你自己判断。
+We don't make decisions for you. We lay out what 4 engines found, highlight the risks, and confirm what's safe. Then you decide.
 
-但我们会尽量让这个判断变简单。
+But we try to make that decision easy.
 
 ---
 
