@@ -7,6 +7,7 @@ import { AgentShieldAdapter } from "./agentshield.js";
 import { AguaraAdapter } from "./aguara.js";
 import { TencentGuardAdapter } from "./tencent.js";
 import { SkillVetterAdapter } from "./skill-vetter.js";
+import { SemgrepAdapter } from "./semgrep.js";
 
 /**
  * Registry of all available engine adapters.
@@ -15,6 +16,7 @@ const ALL_ENGINES: EngineAdapter[] = [
   new AgentShieldAdapter(),
   new AguaraAdapter(),
   new SkillVetterAdapter(),
+  new SemgrepAdapter(),
   new TencentGuardAdapter(),
 ];
 
