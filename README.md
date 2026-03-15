@@ -13,17 +13,15 @@
 **AgentShield 帮你扫一眼。** 4 个独立扫描引擎交叉验证，给你一份清晰的中文安全报告。
 
 ```bash
-npx @elliotllliu/agent-shield scan ./mcp-server --engines all
+# 扫描（自动安装引擎，出会诊报告）
+npx @elliotllliu/agent-shield scan ./my-skill/
 ```
 
 ## ⚡ 快速开始
 
 ```bash
-# 基础扫描（内置引擎，秒出结果）
+# 就这一行，自动装引擎、跑扫描、出报告
 npx @elliotllliu/agent-shield scan ./my-skill/
-
-# 多引擎扫描（首次会自动安装其他引擎）
-npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
 ```
 
 ## 📋 输出示例
@@ -139,8 +137,8 @@ npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
 | **[Invariant](https://github.com/invariantlabs-ai/mcp-scan)** | MCP 专项：Tool Poisoning、跨域提权 | ✅ 自动 |
 
 ```bash
-# 首次运行自动安装所有引擎
-$ agent-shield scan ./dir --engines all
+# 首次运行自动安装
+$ agent-shield scan ./dir
 
 🔧 检查引擎...
   ✅ AgentShield — 已就绪
@@ -181,23 +179,19 @@ $ agent-shield scan ./dir --engines all
 # 终端报告（默认中文）
 agent-shield scan ./dir
 
-# 终端报告（英文）
+# 英文报告
 agent-shield scan ./dir --lang en
 
 # HTML 报告（可分享）
 agent-shield scan ./dir --html -o report.html
 
-# JSON 输出（CI/CD 集成）
+# JSON（CI/CD 集成）
 agent-shield scan ./dir --json
 
-# 多引擎
-agent-shield scan ./dir --engines all
-agent-shield scan ./dir --engines all --html -o report.html
-
-# 附带参考分数（可选）
+# 附带参考分数
 agent-shield scan ./dir --score
 
-# SARIF 输出（GitHub Code Scanning）
+# SARIF（GitHub Code Scanning）
 agent-shield scan ./dir --sarif -o results.sarif
 ```
 

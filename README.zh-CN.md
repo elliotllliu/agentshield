@@ -11,17 +11,17 @@
 **AgentShield 帮你扫一眼。** 4 个独立扫描引擎交叉验证，给你一份清晰的中文安全报告。
 
 ```bash
-npx @elliotllliu/agent-shield scan ./mcp-server --engines all
+npx @elliotllliu/agent-shield scan ./mcp-server 
 ```
 
 ## ⚡ 快速开始
 
 ```bash
-# 基础扫描（内置引擎，秒出结果）
+# 就这一行，自动装引擎、跑扫描、出报告
 npx @elliotllliu/agent-shield scan ./my-skill/
 
-# 多引擎扫描（首次会自动安装其他引擎）
-npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
+# 扫描（首次会自动安装所有引擎）
+npx @elliotllliu/agent-shield scan ./my-skill/ 
 ```
 
 ## 📋 输出示例
@@ -134,7 +134,7 @@ npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
 
 ```bash
 # 首次运行自动安装
-$ agent-shield scan ./dir --engines all
+$ agent-shield scan ./dir 
 
 🔧 检查引擎...
   ✅ AgentShield — 已就绪
@@ -185,7 +185,7 @@ agent-shield scan ./dir --html -o report.html
 agent-shield scan ./dir --json
 
 # 多引擎
-agent-shield scan ./dir --engines all
+agent-shield scan ./dir 
 
 # 附带参考分数
 agent-shield scan ./dir --score
