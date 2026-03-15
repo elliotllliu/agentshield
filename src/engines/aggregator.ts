@@ -374,7 +374,7 @@ export function printAggregatedReport(result: AggregatedResult): void {
   console.log();
 
   // Suggestions
-  if (totalHigh > 0 || totalMed > 0) {
+  if (enginesWithHigh > 0 || enginesWithMed > 0) {
     console.log(chalk.bold("💡 建议"));
     console.log();
 
