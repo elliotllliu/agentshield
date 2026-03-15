@@ -155,6 +155,9 @@ Real-world case study: detected a 3-layer supply chain attack where a published 
 # Scan a skill / MCP server / plugin (29 rules, offline, <1s)
 npx @elliotllliu/agent-shield scan ./my-skill/
 
+# Multi-engine scan — run multiple scanners, cross-validate results
+npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
+
 # Scan with optional reference score
 npx @elliotllliu/agent-shield scan ./my-skill/ --score
 
@@ -179,6 +182,50 @@ npx @elliotllliu/agent-shield scan ./skill/ --sarif -o results.sarif
 # HTML report
 npx @elliotllliu/agent-shield scan ./skill/ --html
 ```
+
+---
+
+## 🔗 Multi-Engine Aggregation
+
+Run multiple security scanners simultaneously and get a unified report with **cross-engine validation** — findings confirmed by multiple engines have higher confidence.
+
+```bash
+# Run all available engines
+agent-shield scan ./my-skill/ --engines all
+
+# Choose specific engines
+agent-shield scan ./my-skill/ --engines agentshield,aguara
+
+# List available engines
+agent-shield scan ./my-skill/ --engines list
+```
+
+### Integrated Engines
+
+| Engine | Focus | Install |
+|--------|-------|---------|
+| **AgentShield** (built-in) | AI Agent risks: skill hijack, prompt injection, MCP runtime | Always available |
+| **[Aguara](https://github.com/garagon/aguara)** | 177 rules: prompt injection, data exfil, NLP + taint tracking | `curl -fsSL ... \| bash` |
+| **[Skill Vetter](https://github.com/app-incubator-xyz/skill-vetter)** | Multi-scanner gate: aguara + Cisco + secrets + structure | `git clone` |
+| **[Tencent AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard)** | LLM-powered deep code audit | Requires API key |
+
+### Cross-Engine Validation
+
+The most valuable part of multi-engine scanning — when multiple independent scanners agree on a finding, it's much more likely to be a real issue:
+
+```
+🔗 Cross-Engine Validation
+
+  HIGH [3/3 engines] plugin.ts:15
+    Dynamic code execution via eval()
+    Detected by: AgentShield · Aguara · Skill Vetter
+
+  MEDIUM [2/3 engines] src/bot.ts:492
+    Tool output interception
+    Detected by: Aguara · Skill Vetter
+```
+
+> We aggregate, not compete. Each engine has unique strengths — together they provide more complete coverage and higher confidence.
 
 ---
 

@@ -106,6 +106,9 @@ eval("{'a': 1}")    # → ✅ 不标记（安全字符串）
 # 扫描（29 条规则，离线运行，<1 秒）
 npx @elliotllliu/agent-shield scan ./my-skill/
 
+# 多引擎聚合扫描 — 多个扫描器同时运行，交叉验证
+npx @elliotllliu/agent-shield scan ./my-skill/ --engines all
+
 # 附带参考分数（可选）
 npx @elliotllliu/agent-shield scan ./my-skill/ --score
 
@@ -124,6 +127,50 @@ npx @elliotllliu/agent-shield scan ./skill/ --json
 # SARIF 输出（GitHub Code Scanning）
 npx @elliotllliu/agent-shield scan ./skill/ --sarif -o results.sarif
 ```
+
+---
+
+## 🔗 多引擎聚合扫描
+
+同时运行多个安全扫描器，生成统一报告。**交叉验证** — 多个引擎同时标记的问题可信度更高。
+
+```bash
+# 运行所有可用引擎
+agent-shield scan ./my-skill/ --engines all
+
+# 指定引擎
+agent-shield scan ./my-skill/ --engines agentshield,aguara
+
+# 列出可用引擎
+agent-shield scan ./my-skill/ --engines list
+```
+
+### 已集成引擎
+
+| 引擎 | 专注领域 | 安装方式 |
+|------|---------|---------|
+| **AgentShield**（内置） | AI Agent 专项：Skill 劫持、Prompt 注入、MCP 运行时 | 无需安装 |
+| **[Aguara](https://github.com/garagon/aguara)** | 177 规则：Prompt 注入、数据外渗、NLP + 污点追踪 | 一键安装 |
+| **[Skill Vetter](https://github.com/app-incubator-xyz/skill-vetter)** | 多扫描器聚合：aguara + Cisco + 凭证检测 + 结构检查 | `git clone` |
+| **[Tencent AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard)** | LLM 驱动的深度代码审计 | 需要 API key |
+
+### 交叉验证
+
+多引擎扫描的核心价值 — 多个独立扫描器共同确认的问题，更可能是真实风险：
+
+```
+🔗 Cross-Engine Validation
+
+  HIGH [3/3 engines] plugin.ts:15
+    Dynamic code execution via eval()
+    Detected by: AgentShield · Aguara · Skill Vetter
+
+  MEDIUM [2/3 engines] src/bot.ts:492
+    Tool output interception
+    Detected by: Aguara · Skill Vetter
+```
+
+> 我们聚合，不竞争。每个引擎都有独特优势——组合起来覆盖更全、可信度更高。
 
 ---
 
