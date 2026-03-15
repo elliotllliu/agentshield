@@ -1,7 +1,7 @@
 {
   "name": "@elliotllliu/agent-shield",
   "version": "0.16.0",
-  "description": "AI Agent risk scanner — detect security risks in skills, MCP servers & plugins. 29 rules mapped to OWASP Top 10 LLM, MITRE ATLAS & CWE standards. Offline, open source.",
+  "description": "Multi-engine AI agent security scanner — one scan, four engines, one report",
   "type": "module",
   "bin": {
     "agent-shield": "./dist/cli.js"

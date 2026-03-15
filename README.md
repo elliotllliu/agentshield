@@ -2,6 +2,8 @@
 
 **Give your AI a health check.**
 
+One scan. Four engines. One report.
+
 [中文文档](./README.zh-CN.md)
 
 You found an MCP Server / Skill / Plugin online and want to install it. But you're wondering:
