@@ -133,7 +133,7 @@ program
       writeFileSync(file, out);
       console.error(`📄 HTML report written to ${file}`);
     } else {
-      printReport(result, { showScore: (options as any).score });
+      printReport(result, { showScore: (options as any).score, lang: (options as any).lang || "zh" });
     }
 
     const threshold = options.failUnder ?? result.score;
@@ -208,7 +208,7 @@ program
       if (options.json) {
         printJsonReport(result);
       } else {
-        printReport(result, { showScore: (options as any).score });
+        printReport(result, { showScore: (options as any).score, lang: (options as any).lang || "zh" });
       }
 
       // Provenance verification
@@ -451,7 +451,7 @@ program
     if (options.json) {
       printJsonReport(result);
     } else {
-      printReport(result, { showScore: (options as any).score });
+      printReport(result, { showScore: (options as any).score, lang: (options as any).lang || "zh" });
       // Install recommendation
       console.log();
       if (result.score >= 90) {
@@ -498,7 +498,7 @@ program
           if (existsSync(p) && statSync(p).isDirectory()) {
             console.log(`\n📁 ${agent.name}: ${p}`);
             const result = scan(p);
-            printReport(result, { showScore: (options as any).score });
+            printReport(result, { showScore: (options as any).score, lang: (options as any).lang || "zh" });
           }
         }
       }
