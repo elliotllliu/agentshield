@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import type { ScanResult, Finding, ScoreResult } from "../types.js";
 import { riskLabel } from "../score.js";
+import { getRuleReference, groupByOwasp, type RuleReference } from "../references.js";
 
 const SEVERITY_ICON: Record<string, string> = {
   high: chalk.red("🔴 High Risk"),
@@ -14,160 +15,179 @@ const SEVERITY_LINE: Record<string, (s: string) => string> = {
   low: chalk.green,
 };
 
-export function printReport(result: ScanResult): void {
+export interface ReportOptions {
+  /** Show numeric score and dimension breakdown (default: false) */
+  showScore?: boolean;
+  /** Show possible false positives (default: false) */
+  showFp?: boolean;
+}
+
+/**
+ * Print a risk-inventory report (default mode).
+ * Groups findings by OWASP/risk category with standard references.
+ * Score is only shown when opts.showScore is true.
+ */
+export function printReport(result: ScanResult, opts: ReportOptions = {}): void {
   const { target, filesScanned, linesScanned, findings, score, scoreResult, duration } = result;
 
   const divider = chalk.dim("─".repeat(60));
+  const realFindings = findings.filter(f => !f.possibleFalsePositive);
 
   console.log();
   console.log(divider);
-  console.log(chalk.bold("🛡️  AgentShield Scan Report"));
+  console.log(chalk.bold("🛡️  AgentShield Risk Report"));
   console.log(divider);
-  console.log(
-    chalk.dim(`📁 Target:  ${target}`),
-  );
-  console.log(
-    chalk.dim(`📄 Files:   ${filesScanned} files, ${formatLines(linesScanned)}`),
-  );
-  console.log(
-    chalk.dim(`⏱  Time:    ${duration}ms`),
-  );
+  console.log(chalk.dim(`📁 Target:  ${target}`));
+  console.log(chalk.dim(`📄 Files:   ${filesScanned} files, ${formatLines(linesScanned)}`));
+  console.log(chalk.dim(`⏱  Time:    ${duration}ms`));
   console.log(divider);
   console.log();
 
-  // Summary line first
-  const high = findings.filter(f => f.severity === "high" && !f.possibleFalsePositive).length;
-  const medium = findings.filter(f => f.severity === "medium" && !f.possibleFalsePositive).length;
-  const low = findings.filter(f => f.severity === "low" && !f.possibleFalsePositive).length;
+  if (realFindings.length === 0) {
+    console.log(chalk.green.bold("✅ No security risks detected."));
+    if (opts.showScore) {
+      const displayScore = scoreResult ? scoreResult.overall : score;
+      console.log(chalk.dim(`  Reference score: ${displayScore}/100`));
+    }
+    console.log();
+    console.log(divider);
+    console.log();
+    return;
+  }
 
-  // Use v2 score if available
-  const displayScore = scoreResult ? scoreResult.overall : score;
-  const gradeInfo = scoreResult ? `${scoreResult.grade} · ${scoreResult.gradeLabel}` : riskLabel(displayScore);
+  // ─── Risk Summary (grouped by OWASP category) ───
+  const owaspGroups = groupByOwasp(realFindings);
+  const high = realFindings.filter(f => f.severity === "high").length;
+  const medium = realFindings.filter(f => f.severity === "medium").length;
+  const low = realFindings.filter(f => f.severity === "low").length;
 
-  const scoreColor = displayScore >= 90 ? chalk.green : displayScore >= 75 ? chalk.yellow : displayScore >= 50 ? chalk.hex("#FF8800") : displayScore >= 0 ? chalk.red : chalk.redBright;
-  const scoreBar = generateScoreBar(displayScore);
-  console.log(scoreColor.bold(`Score: ${displayScore}/100`) + "  " + scoreBar + "  " + scoreColor(`(${gradeInfo})`));
+  console.log(chalk.bold("📊 Risk Summary"));
   console.log();
 
-  // Dimension breakdown (v2)
-  if (scoreResult) {
-    console.log(chalk.bold("📊 Dimension Scores:"));
-    const dims = [
-      { key: "codeExec" as const, label: "Code Execution" },
-      { key: "dataSafety" as const, label: "Data Safety" },
-      { key: "supplyChain" as const, label: "Supply Chain" },
-      { key: "promptInjection" as const, label: "Prompt Injection" },
-      { key: "codeQuality" as const, label: "Code Quality" },
-    ];
-    for (const d of dims) {
-      const dim = scoreResult.dimensions[d.key];
-      const dimColor = dim.score >= 90 ? chalk.green : dim.score >= 75 ? chalk.yellow : dim.score >= 60 ? chalk.hex("#FF8800") : dim.score >= 40 ? chalk.red : chalk.redBright;
-      const bar = generateScoreBar(dim.score);
-      const label = d.label.padEnd(18);
-      console.log(`  ${dimColor(label)} ${dimColor.bold(String(dim.score).padStart(3))}/100 ${bar}`);
+  // Sort groups: categories with high-severity findings first
+  const sortedGroups = [...owaspGroups.entries()].sort((a, b) => {
+    const aMax = severityRank(a[1]);
+    const bMax = severityRank(b[1]);
+    return aMax - bMax;
+  });
+
+  for (const [category, groupFindings] of sortedGroups) {
+    const gHigh = groupFindings.filter(f => f.severity === "high").length;
+    const gMed = groupFindings.filter(f => f.severity === "medium").length;
+    const gLow = groupFindings.filter(f => f.severity === "low").length;
+
+    const ref = getRuleReference(groupFindings[0]!.rule);
+    const icon = gHigh > 0 ? "🔴" : gMed > 0 ? "🟡" : "🟢";
+    const counts: string[] = [];
+    if (gHigh > 0) counts.push(chalk.red(`${gHigh} high`));
+    if (gMed > 0) counts.push(chalk.yellow(`${gMed} medium`));
+    if (gLow > 0) counts.push(chalk.green(`${gLow} low`));
+
+    console.log(`  ${icon} ${chalk.bold(category)} (${counts.join(", ")})`);
+    if (ref.owasp) {
+      console.log(chalk.dim(`     ${ref.owasp.url}`));
+    }
+  }
+  console.log();
+
+  // ─── Detailed Findings (grouped by risk category) ───
+  console.log(chalk.bold("📋 Detailed Findings"));
+  console.log();
+
+  for (const [category, groupFindings] of sortedGroups) {
+    const ref = getRuleReference(groupFindings[0]!.rule);
+    const headerColor = groupFindings.some(f => f.severity === "high")
+      ? chalk.red : groupFindings.some(f => f.severity === "medium")
+      ? chalk.yellow : chalk.green;
+
+    // Category header with standard references
+    console.log(headerColor.bold(`  [${category}]`));
+    console.log(chalk.dim(`  ${ref.riskDescription}`));
+
+    // Show references
+    const refs: string[] = [];
+    if (ref.owasp) refs.push(`OWASP ${ref.owasp.id}`);
+    if (ref.cwe) refs.push(ref.cwe.id);
+    if (ref.atlas) refs.push(`ATLAS ${ref.atlas.id}`);
+    if (refs.length > 0) {
+      console.log(chalk.dim(`  Standards: ${refs.join(" · ")}`));
+    }
+
+    // Show papers for high/medium findings
+    if (ref.papers && groupFindings.some(f => f.severity !== "low")) {
+      for (const paper of ref.papers.slice(0, 2)) {
+        console.log(chalk.dim(`  Research: ${paper.authors} (${paper.year}) "${paper.title}"`));
+      }
     }
     console.log();
 
-    // Bonus
-    if (scoreResult.bonus > 0) {
-      console.log(chalk.bold(`🏅 Bonus: +${scoreResult.bonus}`) + chalk.dim(` (${scoreResult.bonusReasons.join(", ")})`));
-      console.log();
-    }
-
-    // Score breakdown (transparency)
-    if (findings.filter(f => !f.possibleFalsePositive).length > 0) {
-      console.log(chalk.bold("📋 Score Breakdown:"));
-      console.log(chalk.dim(`  Base: 100`));
-
-      // Collect deductions by rule
-      const deductions: Array<{ rule: string; severity: string; confidence: string; count: number; total: number }> = [];
-      const ruleTotals: Record<string, { severity: string; confidence: string; count: number; total: number }> = {};
-
-      for (const f of findings.filter(f => !f.possibleFalsePositive)) {
-        const key = `${f.rule}|${f.severity}|${f.confidence || "medium"}`;
-        if (!ruleTotals[key]) {
-          ruleTotals[key] = { severity: f.severity, confidence: f.confidence || "medium", count: 0, total: 0 };
-        }
-        ruleTotals[key]!.count++;
-      }
-
-      // Calculate approximate penalty for each group
-      for (const [key, info] of Object.entries(ruleTotals)) {
-        const rule = key.split("|")[0]!;
-        deductions.push({ rule, severity: info.severity, confidence: info.confidence, count: info.count, total: 0 });
-      }
-
-      // Sort by severity (high → medium → low)
-      const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-      deductions.sort((a, b) => (sevOrder[a.severity] ?? 2) - (sevOrder[b.severity] ?? 2));
-
-      for (const d of deductions) {
-        const confLabel = d.confidence === "high" ? "" : d.confidence === "low" ? ", conf: low → ×0.3" : ", conf: medium → ×0.6";
-        const countLabel = d.count > 1 ? ` ×${d.count}` : "";
-        const sevColor = d.severity === "high" ? chalk.red : d.severity === "medium" ? chalk.yellow : chalk.green;
-        console.log(sevColor(`  ${d.rule}${countLabel} (${d.severity}${confLabel})`));
-      }
-
-      // Caps
-      const hasHighFindings = findings.some(f => f.severity === "high" && !f.possibleFalsePositive);
-      const hasMediumFindings = findings.some(f => f.severity === "medium" && !f.possibleFalsePositive);
-      if (hasHighFindings) {
-        console.log(chalk.red.dim(`  ⚠ Cap applied: high findings present → max 30`));
-      } else if (hasMediumFindings) {
-        console.log(chalk.yellow.dim(`  ⚠ Cap applied: medium findings present → max 85`));
-      }
-
-      if (scoreResult.bonus === 0 && (hasHighFindings || hasMediumFindings)) {
-        console.log(chalk.dim(`  ⚠ Bonus suppressed (security findings present)`));
-      }
-
-      console.log(chalk.bold(`  Final: ${scoreResult.overall}/100`));
-      console.log();
-    }
-  }
-
-  if (high > 0) console.log(chalk.red(`🔴 High Risk: ${high} finding${high > 1 ? "s" : ""}`));
-  if (medium > 0) console.log(chalk.yellow(`🟡 Medium Risk: ${medium} finding${medium > 1 ? "s" : ""}`));
-  if (low > 0) console.log(chalk.green(`🟢 Low Risk: ${low} finding${low > 1 ? "s" : ""}`));
-  console.log();
-
-  // Group by severity, ordered high → medium → low
-  const bySeverity = groupBy(findings.filter(f => !f.possibleFalsePositive), (f) => f.severity);
-
-  for (const severity of ["high", "medium", "low"] as const) {
-    const group = bySeverity[severity];
-    if (!group || group.length === 0) continue;
-
-    console.log(`${SEVERITY_ICON[severity]} (${group.length})`);
-    for (let i = 0; i < group.length; i++) {
-      const f = group[i]!;
-      const prefix = i < group.length - 1 ? "  ├─" : "  └─";
+    // Individual findings
+    for (let i = 0; i < groupFindings.length; i++) {
+      const f = groupFindings[i] as Finding;
+      const prefix = i < groupFindings.length - 1 ? "    ├─" : "    └─";
       const loc = f.line ? `${f.file}:${f.line}` : f.file;
       const colorize = SEVERITY_LINE[f.severity] || chalk.white;
-      const confLabel = f.confidence === "high" ? "" : f.confidence === "medium" ? " [medium confidence]" : f.confidence === "low" ? " [needs review]" : "";
-      console.log(colorize(`${prefix} ${loc} — [${f.rule}] ${f.message}${confLabel}`));
+      const confLabel = f.confidence === "low" ? " [needs review]" : f.confidence === "medium" ? " [medium confidence]" : "";
+      console.log(colorize(`${prefix} ${loc} — ${f.message}${confLabel}`));
       if (f.evidence) {
-        const ePrefix = i < group.length - 1 ? "  │  " : "     ";
+        const ePrefix = i < groupFindings.length - 1 ? "    │  " : "       ";
         console.log(chalk.dim(`${ePrefix}${f.evidence}`));
       }
     }
     console.log();
   }
 
-  // FP section (collapsed)
+  // ─── FP section ───
   const fpFindings = findings.filter(f => f.possibleFalsePositive);
   if (fpFindings.length > 0) {
     console.log(chalk.dim(`ℹ️  ${fpFindings.length} possible false positive${fpFindings.length > 1 ? "s" : ""} suppressed (use --show-fp to display)`));
     console.log();
   }
 
-  if (findings.filter(f => !f.possibleFalsePositive).length === 0) {
-    console.log(chalk.green.bold("✅ No security issues found!"));
-    console.log();
+  // ─── Score section (optional) ───
+  if (opts.showScore && scoreResult) {
+    printScoreSection(scoreResult, realFindings);
   }
 
   console.log(divider);
   console.log();
+}
+
+/**
+ * Print the optional score section.
+ */
+function printScoreSection(scoreResult: ScoreResult, findings: Finding[]): void {
+  console.log(chalk.bold("📊 Reference Score") + chalk.dim(" (opinionated — use --score to show)"));
+  console.log(chalk.dim("  This score is a density-based risk metric, not a definitive safety judgment."));
+  console.log();
+
+  const displayScore = scoreResult.overall;
+  const scoreColor = displayScore >= 90 ? chalk.green : displayScore >= 75 ? chalk.yellow : displayScore >= 50 ? chalk.hex("#FF8800") : chalk.red;
+  const scoreBar = generateScoreBar(displayScore);
+  console.log(`  ${scoreColor.bold(`${displayScore}/100`)}  ${scoreBar}`);
+  console.log();
+
+  // Dimension breakdown
+  const dims = [
+    { key: "codeExec" as const, label: "Code Execution" },
+    { key: "dataSafety" as const, label: "Data Safety" },
+    { key: "supplyChain" as const, label: "Supply Chain" },
+    { key: "promptInjection" as const, label: "Prompt Injection" },
+    { key: "codeQuality" as const, label: "Code Quality" },
+  ];
+  for (const d of dims) {
+    const dim = scoreResult.dimensions[d.key];
+    const dimColor = dim.score >= 90 ? chalk.green : dim.score >= 75 ? chalk.yellow : dim.score >= 60 ? chalk.hex("#FF8800") : chalk.red;
+    const bar = generateScoreBar(dim.score);
+    console.log(`    ${d.label.padEnd(18)} ${dimColor.bold(String(dim.score).padStart(3))}/100 ${bar}`);
+  }
+  console.log();
+}
+
+function severityRank(findings: Finding[]): number {
+  if (findings.some(f => f.severity === "high")) return 0;
+  if (findings.some(f => f.severity === "medium")) return 1;
+  return 2;
 }
 
 function formatLines(n: number): string {
@@ -177,20 +197,9 @@ function formatLines(n: number): string {
 
 function generateScoreBar(score: number): string {
   const width = 20;
-  // Normalize: -100..100 → 0..20
   const normalized = Math.max(0, Math.min(100, score));
   const filled = Math.round((normalized / 100) * width);
   const empty = width - filled;
-  const color = score >= 90 ? chalk.green : score >= 75 ? chalk.yellow : score >= 50 ? chalk.hex("#FF8800") : score >= 0 ? chalk.red : chalk.redBright;
+  const color = score >= 90 ? chalk.green : score >= 75 ? chalk.yellow : score >= 50 ? chalk.hex("#FF8800") : chalk.red;
   return color("█".repeat(filled)) + chalk.dim("░".repeat(empty));
-}
-
-function groupBy<T>(arr: T[], fn: (item: T) => string): Record<string, T[]> {
-  const result: Record<string, T[]> = {};
-  for (const item of arr) {
-    const key = fn(item);
-    if (!result[key]) result[key] = [];
-    result[key]!.push(item);
-  }
-  return result;
 }

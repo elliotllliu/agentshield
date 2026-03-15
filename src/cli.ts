@@ -26,9 +26,10 @@ program
 
 program
   .command("scan")
-  .description("Scan a skill/plugin directory for security issues")
+  .description("Scan a skill/plugin directory for security risks")
   .argument("<directory>", "Target directory to scan")
   .option("--json", "Output results as JSON")
+  .option("--score", "Show reference score (optional risk density metric)")
   .option("--fail-under <score>", "Exit with code 1 if score is below threshold", parseInt)
   .option("--disable <rules>", "Comma-separated rules to disable")
   .option("--enable <rules>", "Comma-separated rules to enable (only these)")
@@ -104,7 +105,7 @@ program
       writeFileSync(file, out);
       console.error(`📄 HTML report written to ${file}`);
     } else {
-      printReport(result);
+      printReport(result, { showScore: (options as any).score });
     }
 
     const threshold = options.failUnder ?? result.score;
@@ -179,7 +180,7 @@ program
       if (options.json) {
         printJsonReport(result);
       } else {
-        printReport(result);
+        printReport(result, { showScore: (options as any).score });
       }
 
       // Provenance verification
@@ -422,7 +423,7 @@ program
     if (options.json) {
       printJsonReport(result);
     } else {
-      printReport(result);
+      printReport(result, { showScore: (options as any).score });
       // Install recommendation
       console.log();
       if (result.score >= 90) {
@@ -469,7 +470,7 @@ program
           if (existsSync(p) && statSync(p).isDirectory()) {
             console.log(`\n📁 ${agent.name}: ${p}`);
             const result = scan(p);
-            printReport(result);
+            printReport(result, { showScore: (options as any).score });
           }
         }
       }
