@@ -1,0 +1,12 @@
+{
+  "name": "elliotllliu/agent-shield",
+  "description": "🛡️ Security scanner for AI agents, MCP servers & plugins — 30 rules, AST taint tracking, cross-file analysis, kill chain detection. Free & open source alternative to Snyk Agent Scan.",
+  "accepts": [
+    {
+      "network": "eip155:8453",
+      "asset": "USDC",
+      "address": "YOUR_WALLET_ADDRESS"
+    }
+  ],
+  "resources": []
+}
