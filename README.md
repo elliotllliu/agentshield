@@ -88,17 +88,18 @@ Because it's not one engine making the call. It's **8 independent scanning engin
 
 | Engine | What it's best at |
 |--------|------------------|
-| 🛡️ **AgentShield** | AI Agent threats — skill hijack, prompt injection, MCP runtime |
+| 📋 **AgentShield** *(reference)* | AI Agent basics — skill hijack, prompt injection, MCP runtime |
 | 🔍 **[Aguara](https://github.com/garagon/aguara)** | General security — 177 rules, data exfil, taint tracking |
 | 🔎 **[Semgrep](https://github.com/semgrep/semgrep)** | Code quality — 2000+ rules, injection, XSS, hardcoded secrets |
 | 🧪 **[Invariant](https://github.com/invariantlabs-ai/mcp-scan)** | MCP-specific — tool poisoning, cross-origin escalation, rug pull |
+| 🔬 **[Trivy](https://github.com/aquasecurity/trivy)** | Vulnerability scan + secret detection + SBOM |
+| 🔑 **[Gitleaks](https://github.com/gitleaks/gitleaks)** | Secret and token leak detection |
+| 🐍 **[Bandit](https://github.com/PyCQA/bandit)** | Python code security |
+| 📡 **[Bearer](https://github.com/Bearer/bearer)** | Data flow + privacy analysis |
 
 **Each engine has its own strengths. We combine all of them into one report.**
 
-The stronger they get, the stronger we get. We're not building another scanner — we're building the layer that makes every scanner better by cross-validating their results.
-
-**If 3 engines say safe and 1 says dangerous → probably a false positive.**
-**If 3 engines say dangerous → it's real.**
+The built-in engine is reference-only — the overall conclusion is decided by the 7 external engines' consensus. The stronger they get, the stronger we get.
 
 ---
 
