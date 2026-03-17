@@ -171,12 +171,22 @@ export async function installBearer(): Promise<boolean> {
   try {
     const binDir = getEngineBinDir();
     console.log("  📦 Bearer — 正在安装...");
-    execSync(
-      `curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh -s -- -b "${binDir}" 2>/dev/null`,
-      { timeout: 120000, stdio: ["pipe", "pipe", "pipe"], shell: "/bin/bash" }
-    );
-    console.log("  ✅ Bearer — 安装完成");
-    return true;
+    const tag = execSync(
+      "curl -sI https://github.com/Bearer/bearer/releases/latest 2>/dev/null | grep -i location | sed 's/.*tag\\///' | tr -d '\\r\\n'",
+      { timeout: 15000, stdio: ["pipe", "pipe", "pipe"], shell: "/bin/bash" }
+    ).toString().trim();
+    if (tag) {
+      const ver = tag.replace("v", "");
+      const os = platform() === "darwin" ? "darwin" : "linux";
+      const cpu = arch() === "arm64" ? "arm64" : "amd64";
+      const url = `https://github.com/Bearer/bearer/releases/download/${tag}/bearer_${ver}_${os}_${cpu}.tar.gz`;
+      execSync(`curl -fsSL "${url}" -o /tmp/bearer.tar.gz && tar xzf /tmp/bearer.tar.gz -C "${binDir}" bearer 2>/dev/null`, {
+        timeout: 60000, stdio: ["pipe", "pipe", "pipe"], shell: "/bin/bash"
+      });
+      console.log("  ✅ Bearer — 安装完成");
+      return true;
+    }
+    throw new Error("no tag");
   } catch {
     console.log("  ❌ Bearer — 安装失败，跳过");
     return false;

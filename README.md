@@ -2,7 +2,7 @@
 
 **Give your AI a health check.**
 
-One scan. Four engines. One report.
+One scan. Eight engines. One report.
 
 [中文文档](./README.zh-CN.md)
 
@@ -10,7 +10,7 @@ You found an MCP Server / Skill / Plugin online and want to install it. But you'
 
 > Is this thing safe? Will it steal my API keys? Hijack my AI? Mine crypto?
 
-**AgentShield answers that in 3 seconds.** One command, 4 independent scanning engines, one clear report.
+**AgentShield answers that in 3 seconds.** One command, 8 independent scanning engines, one clear report.
 
 ```bash
 npx @elliotllliu/agent-shield scan ./that-thing-you-want-to-install
@@ -29,7 +29,7 @@ That's it. First run auto-installs all engines. After that, results come in seco
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📁 Target:   ./mcp-playwright
-🔧 Engines:  4 independent scanners
+🔧 Engines:  8 independent scanners
 ⏱  Time:     12.3s
 
 ──────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ That's it. First run auto-installs all engines. After that, results come in seco
 
 ## Why Trust It?
 
-Because it's not one engine making the call. It's **4 independent scanning engines**, each a specialist in their own domain. We don't compete with them — we bring them together.
+Because it's not one engine making the call. It's **8 independent scanning engines**, each a specialist in their own domain. We don't compete with them — we bring them together.
 
 | Engine | What it's best at |
 |--------|------------------|

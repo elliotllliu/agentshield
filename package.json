@@ -1,6 +1,6 @@
 {
   "name": "@elliotllliu/agent-shield",
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "Multi-engine AI agent security scanner — one scan, four engines, one report",
   "type": "module",
   "bin": {
