@@ -2,7 +2,7 @@
 
 **Give your AI a health check.**
 
-One scan. Eight engines. One report.
+One scan. Thirteen engines. One report.
 
 [中文文档](./README.zh-CN.md)
 
@@ -10,7 +10,7 @@ You found an MCP Server / Skill / Plugin online and want to install it. But you'
 
 > Is this thing safe? Will it steal my API keys? Hijack my AI? Mine crypto?
 
-**AgentShield answers that in seconds.** One command, 8 independent scanning engines, one clear report.
+**AgentShield answers that in seconds.** One command, 13 independent scanning engines, one clear report.
 
 ```bash
 npx @elliotllliu/agent-shield scan ./that-thing-you-want-to-install
@@ -27,7 +27,7 @@ That's it. First run auto-installs all engines. After that, results come in seco
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📁 检测对象:  ./mcp-puppeteer
-🔧 检测引擎:  8 个独立扫描器
+🔧 检测引擎:  13 个独立扫描器
 ⏱  总耗时:    50.2s
 
 ──────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ That's it. First run auto-installs all engines. After that, results come in seco
 
 ## Why Trust It?
 
-Because it's not one engine making the call. It's **8 independent scanning engines**, each a specialist in their own domain. We bring them together:
+Because it's not one engine making the call. It's **13 independent scanning engines**, each a specialist in their own domain. We bring them together:
 
 | Engine | What it's best at |
 |--------|------------------|
@@ -92,6 +92,11 @@ Because it's not one engine making the call. It's **8 independent scanning engin
 | 🔑 **[Gitleaks](https://github.com/gitleaks/gitleaks)** | Secret and token leak detection |
 | 🐍 **[Bandit](https://github.com/PyCQA/bandit)** | Python code security |
 | 📡 **[Bearer](https://github.com/Bearer/bearer)** | Data flow + privacy analysis |
+| 🐕 **[TruffleHog](https://github.com/trufflesecurity/trufflehog)** | Secret detection + verification if active |
+| 🌐 **[OSV-Scanner](https://github.com/google/osv-scanner)** | Dependency vulnerabilities (Google OSV database) |
+| 🦑 **[Grype](https://github.com/anchore/grype)** | Dependency vulnerability scanning |
+| 🟢 **[njsscan](https://github.com/ajinabraham/njsscan)** | Node.js / JavaScript security |
+| 🔐 **[detect-secrets](https://github.com/Yelp/detect-secrets)** | Secret detection (Yelp) |
 
 **Each engine has its own strengths. We combine all of them into one report.**
 

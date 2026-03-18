@@ -2,7 +2,7 @@
 
 **给你的 AI 做个体检。**
 
-一次扫描，八大引擎，一份报告。
+一次扫描，十三大引擎，一份报告。
 
 [English](./README.md)
 
@@ -10,7 +10,7 @@
 
 > 这东西安全吗？会不会偷我的密钥？会不会劫持我的 AI？
 
-**AgentShield 帮你几秒搞定。** 一行命令，8 个独立扫描引擎，一份清晰的报告。
+**AgentShield 帮你几秒搞定。** 一行命令，13 个独立扫描引擎，一份清晰的报告。
 
 ```bash
 npx @elliotllliu/agent-shield scan ./那个你想装的东西
@@ -27,7 +27,7 @@ npx @elliotllliu/agent-shield scan ./那个你想装的东西
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📁 检测对象:  ./mcp-puppeteer
-🔧 检测引擎:  8 个独立扫描器
+🔧 检测引擎:  13 个独立扫描器
 ⏱  总耗时:    50.2s
 
 ──────────────────────────────────────────────────────
@@ -92,6 +92,11 @@ npx @elliotllliu/agent-shield scan ./那个你想装的东西
 | 🔑 **[Gitleaks](https://github.com/gitleaks/gitleaks)** | 密钥和 Token 泄露检测 |
 | 🐍 **[Bandit](https://github.com/PyCQA/bandit)** | Python 代码安全 |
 | 📡 **[Bearer](https://github.com/Bearer/bearer)** | 数据流 + 隐私分析 |
+| 🐕 **[TruffleHog](https://github.com/trufflesecurity/trufflehog)** | 密钥检测 + 验证密钥有效性 |
+| 🌐 **[OSV-Scanner](https://github.com/google/osv-scanner)** | 依赖漏洞（Google OSV 数据库） |
+| 🦑 **[Grype](https://github.com/anchore/grype)** | 依赖项漏洞扫描 |
+| 🟢 **[njsscan](https://github.com/ajinabraham/njsscan)** | Node.js / JavaScript 专项安全 |
+| 🔐 **[detect-secrets](https://github.com/Yelp/detect-secrets)** | 密钥检测（Yelp 出品） |
 
 **每家都有自己的长处。我们把众家的长处结合起来，出一个报表。**
 
